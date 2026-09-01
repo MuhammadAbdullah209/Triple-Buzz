@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+.container-x {
+  @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
+}
+
+.section-title {
+  @apply font-display text-2xl sm:text-3xl font-bold tracking-tight text-ink;
+}
+
+.btn-gold {
+  @apply inline-flex items-center justify-center rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-brand-goldDark;
+}
+
+.btn-dark {
+  @apply inline-flex w-full items-center justify-center gap-2 rounded-b-md bg-ink py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-neutral-800;
+}
+
+.card-shadow {
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.06);
+}
