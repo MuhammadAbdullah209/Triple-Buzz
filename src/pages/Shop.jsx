@@ -11,7 +11,7 @@ export default function Shop() {
   const [searchParams] = useSearchParams()
   const initialCategory = searchParams.get('category')
   const [selectedCategories, setSelectedCategories] = useState(
-    initialCategory && CATEGORIES.includes(initialCategory) ? [initialCategory] : []
+    initialCategory ? initialCategory.split(',').filter(Boolean) : []
   )
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')

@@ -13,23 +13,27 @@ export default function ProductCard({ product, flat = false }) {
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         {product.soldOut && (
-          <span className="absolute left-2 top-2 rounded bg-ink px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+          <span className="absolute left-2 top-2  bg-ink px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
             Sold Out
           </span>
         )}
       </Link>
-      <div className="flex flex-1 flex-col gap-1 px-3 pt-3 pb-2">
+      <div className={`flex flex-1 flex-col gap-1 ${flat ? 'px-2.5 pt-2.5 pb-1.5' : 'px-3 pt-3 pb-2'}`}>
         {product.brand && (
-          <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">{product.brand}</p>
+          <p className={`font-medium uppercase tracking-wide text-neutral-400 ${flat ? 'text-[10px]' : 'text-[11px]'}`}>
+            {product.brand}
+          </p>
         )}
         <Link
           to={`/shop/${product.slug}`}
-          className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink hover:text-brand-goldDark"
+          className={`line-clamp-2 font-semibold leading-tight text-ink hover:text-brand-goldDark ${
+            flat ? 'min-h-[2rem] text-xs' : 'min-h-[2.5rem] text-sm'
+          }`}
         >
           {product.name}
         </Link>
-        {product.meta && <p className="text-sm text-ink">{product.meta}</p>}
-        <p className="mt-1 text-base font-semibold text-ink">${product.price}</p>
+        {product.meta && <p className={`text-ink ${flat ? 'text-xs' : 'text-sm'}`}>{product.meta}</p>}
+        <p className={`mt-1 font-semibold text-ink ${flat ? 'text-sm' : 'text-base'}`}>${product.price}</p>
       </div>
       <button
         type="button"
@@ -38,7 +42,9 @@ export default function ProductCard({ product, flat = false }) {
           addItem(product, 1)
           openCart()
         }}
-        className={`btn-dark disabled:cursor-not-allowed disabled:opacity-40 ${flat ? '' : 'rounded-t-none'}`}
+        className={`btn-dark disabled:cursor-not-allowed disabled:opacity-40 !rounded-none ${
+          flat ? 'py-2 text-[11px]' : ''
+        }`}
       >
         {product.soldOut ? 'Sold Out' : 'Add to cart'}
       </button>

@@ -2,48 +2,68 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiSearch, FiUser, FiShoppingCart, FiMenu, FiX, FiChevronDown } from 'react-icons/fi'
 import Logo from './Logo'
-import { navLinks, shopCategories } from '../data/siteData'
+import { shopCategories, categoryFilterMap } from '../data/siteData'
 import { useCart } from '../context/CartContext'
 
-function navHref(link) {
-  if (link.label === 'Home') return '/'
-  if (link.label === 'Shop') return '/shop'
-  return '/'
-}
-
 function categoryHref(name) {
-  return `/shop?category=${encodeURIComponent(name)}`
+  const mapped = categoryFilterMap[name]
+  const value = mapped ? mapped.join(',') : name
+  return `/shop?category=${encodeURIComponent(value)}`
 }
 
-const MEGA_COLS = 5
+function SearchModal({ open, onClose }) {
+  const inputRef = useRef(null)
 
-function ShopMegaMenu({ open }) {
+  useEffect(() => {
+    if (!open) return
+    inputRef.current?.focus()
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, onClose])
+
+  if (!open) return null
+
   return (
     <div
-      className={`absolute left-1/2 top-full w-[1180px] max-w-[94vw] -translate-x-1/2 rounded-md border border-neutral-200 bg-white p-8 text-ink shadow-2xl transition-all duration-200 ease-out ${
-        open ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1.5 opacity-0'
-      }`}
+      className="fixed inset-0 z-50 flex justify-center bg-black/40 px-4 pt-24 backdrop-blur-sm"
+      onClick={onClose}
     >
-      <div className="grid grid-cols-5 gap-x-10 gap-y-10">
-        {shopCategories.map((cat, i) => (
-          <div key={cat.label} className={i % MEGA_COLS !== 0 ? 'border-l border-neutral-200 pl-8' : ''}>
-            <Link
-              to={categoryHref(cat.label)}
-              className="block border-b border-neutral-200 pb-2 text-[15px] font-semibold text-ink hover:text-brand-goldDark"
-            >
-              {cat.label}
-            </Link>
-            <ul className="mt-3 flex flex-col gap-2">
-              {cat.subcategories.map((sub) => (
-                <li key={sub}>
-                  <Link to={categoryHref(sub)} className="text-sm font-medium text-ink hover:text-brand-goldDark">
-                    {sub}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <div
+        className="h-fit w-full max-w-xl rounded-lg bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-ink">Search Products</h2>
+          <button
+            type="button"
+            aria-label="Close search"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-md text-neutral-500 hover:bg-black/5 hover:text-ink"
+          >
+            <FiX />
+          </button>
+        </div>
+        <form
+          className="flex w-full items-center overflow-hidden rounded border border-neutral-200"
+          onSubmit={(e) => e.preventDefault()}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search for products..."
+            className="w-full px-4 py-3 text-sm text-ink outline-none"
+          />
+          <button
+            type="submit"
+            className="flex items-center justify-center bg-brand-gold px-5 py-3 text-white hover:bg-brand-goldDark"
+            aria-label="Search"
+          >
+            <FiSearch />
+          </button>
+        </form>
       </div>
     </div>
   )
@@ -54,27 +74,27 @@ const CLOSE_DELAY = 250
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [mobileShopOpen, setMobileShopOpen] = useState(false)
   const [openMobileCat, setOpenMobileCat] = useState(null)
-  const [megaOpen, setMegaOpen] = useState(false)
-  const hoverTimer = useRef(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [openCat, setOpenCat] = useState(null)
+  const timerRef = useRef(null)
   const { items, openCart } = useCart()
   const cartCount = items.length
 
-  useEffect(() => () => clearTimeout(hoverTimer.current), [])
+  useEffect(() => () => clearTimeout(timerRef.current), [])
 
-  const openMega = () => {
-    clearTimeout(hoverTimer.current)
-    hoverTimer.current = setTimeout(() => setMegaOpen(true), OPEN_DELAY)
+  const openDrop = (label) => {
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setOpenCat(label), OPEN_DELAY)
   }
-  const closeMega = () => {
-    clearTimeout(hoverTimer.current)
-    hoverTimer.current = setTimeout(() => setMegaOpen(false), CLOSE_DELAY)
+  const closeDrop = () => {
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setOpenCat(null), CLOSE_DELAY)
   }
 
   return (
     <header className="relative z-40 border-b border-neutral-200 bg-white text-ink">
-      <div className="container-x relative flex items-center justify-between gap-6 py-4">
+      <div className="container-x relative flex items-center justify-between gap-4 py-3">
         <button
           type="button"
           className="text-2xl lg:hidden"
@@ -85,52 +105,64 @@ export default function Header() {
         </button>
 
         <Link to="/" className="shrink-0">
-          <Logo />
+          <Logo className="h-9 sm:h-10 lg:h-12" />
         </Link>
 
-        <nav className="hidden items-center gap-8 text-[15px] font-medium text-neutral-500 lg:flex">
-          {navLinks.map((link) =>
-            link.label === 'Shop' ? (
-              <div
-                key={link.label}
-                onMouseEnter={openMega}
-                onMouseLeave={closeMega}
-              >
-                <Link to="/shop" className="flex items-center gap-1.5 py-2 transition-colors hover:text-ink">
-                  {link.label}
-                  <FiChevronDown className="text-xs" />
-                </Link>
-              </div>
-            ) : (
+        <nav className="hidden flex-1 flex-wrap items-center justify-center gap-x-3.5 gap-y-1 text-[11px] font-bold uppercase tracking-wide text-ink lg:flex">
+          <Link to="/" className="py-2 transition-colors hover:text-brand-goldDark">
+            Home
+          </Link>
+
+          {shopCategories.map((cat) => (
+            <div
+              key={cat.label}
+              className="relative"
+              onMouseEnter={() => openDrop(cat.label)}
+              onMouseLeave={closeDrop}
+            >
               <Link
-                key={link.label}
-                to={navHref(link)}
-                className="flex items-center gap-1.5 py-2 transition-colors hover:text-ink"
+                to={categoryHref(cat.label)}
+                className="flex items-center gap-1 py-2 transition-colors hover:text-brand-goldDark"
               >
-                {link.label}
+                {cat.label}
+                {cat.subcategories.length > 0 && <FiChevronDown className="text-[10px]" />}
               </Link>
-            )
-          )}
+
+              {cat.subcategories.length > 0 && (
+                <div
+                  className={`absolute left-1/2 top-full z-30 mt-1 w-56 -translate-x-1/2 rounded-md border border-neutral-200 bg-white p-3 normal-case shadow-xl transition-all duration-150 ease-out ${
+                    openCat === cat.label
+                      ? 'visible translate-y-0 opacity-100'
+                      : 'invisible -translate-y-1 opacity-0'
+                  }`}
+                >
+                  <ul className="flex flex-col gap-2">
+                    {cat.subcategories.map((sub) => (
+                      <li key={sub}>
+                        <Link
+                          to={categoryHref(sub)}
+                          className="block text-xs font-medium normal-case text-neutral-600 hover:text-brand-goldDark"
+                        >
+                          {sub}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
         </nav>
 
-        <div className="hidden max-w-md flex-1 items-center lg:flex">
-          <div className="flex w-full items-center overflow-hidden rounded border border-neutral-200">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full px-4 py-2.5 text-sm text-ink outline-none"
-            />
-            <button
-              type="button"
-              className="flex items-center justify-center bg-brand-gold px-4 py-2.5 text-white"
-              aria-label="Search"
-            >
-              <FiSearch />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-5 text-sm">
+        <div className="flex shrink-0 items-center gap-4 text-sm">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Open search"
+            className="hidden items-center justify-center rounded-full border border-neutral-200 p-2.5 text-neutral-600 transition-colors hover:border-ink hover:text-ink lg:flex"
+          >
+            <FiSearch className="text-lg" />
+          </button>
           <Link to="/sign-in" className="hidden flex-col items-start leading-tight sm:flex">
             <span className="text-neutral-500">Login / Signup</span>
             <span className="font-semibold text-ink">My account</span>
@@ -146,11 +178,9 @@ export default function Header() {
             <span className="font-semibold text-ink">Cart</span>
           </button>
         </div>
-
-        <div onMouseEnter={openMega} onMouseLeave={closeMega}>
-          <ShopMegaMenu open={megaOpen} />
-        </div>
       </div>
+
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {mobileOpen && (
         <div className="border-t border-neutral-200 bg-white px-4 py-4 lg:hidden">
@@ -165,75 +195,51 @@ export default function Header() {
             </button>
           </div>
           <ul className="flex flex-col gap-1 text-sm font-medium text-neutral-600">
-            {navLinks.map((link) =>
-              link.label === 'Shop' ? (
-                <li key={link.label} className="border-b border-neutral-100 py-2">
-                  <div className="flex items-center justify-between">
-                    <Link to="/shop" onClick={() => setMobileOpen(false)} className="font-semibold text-ink">
-                      Shop
-                    </Link>
+            <li className="border-b border-neutral-100 py-2">
+              <Link to="/" onClick={() => setMobileOpen(false)} className="font-semibold text-ink">
+                Home
+              </Link>
+            </li>
+            {shopCategories.map((cat) => (
+              <li key={cat.label} className="border-b border-neutral-100 py-2">
+                <div className="flex items-center justify-between">
+                  <Link
+                    to={categoryHref(cat.label)}
+                    onClick={() => setMobileOpen(false)}
+                    className="font-semibold text-ink"
+                  >
+                    {cat.label}
+                  </Link>
+                  {cat.subcategories.length > 0 && (
                     <button
                       type="button"
-                      aria-label="Toggle Shop categories"
-                      onClick={() => setMobileShopOpen((v) => !v)}
+                      aria-label={`Toggle ${cat.label} subcategories`}
+                      onClick={() => setOpenMobileCat(openMobileCat === cat.label ? null : cat.label)}
                       className="p-1 text-neutral-400"
                     >
-                      <FiChevronDown className={`transition-transform ${mobileShopOpen ? 'rotate-180' : ''}`} />
+                      <FiChevronDown
+                        className={`text-xs transition-transform ${openMobileCat === cat.label ? 'rotate-180' : ''}`}
+                      />
                     </button>
-                  </div>
-                  {mobileShopOpen && (
-                    <div className="mt-2 flex flex-col gap-3 border-l border-neutral-200 pl-3">
-                      {shopCategories.map((cat) => (
-                        <div key={cat.label}>
-                          <div className="flex items-center justify-between">
-                            <Link
-                              to={categoryHref(cat.label)}
-                              onClick={() => setMobileOpen(false)}
-                              className="text-sm font-semibold text-ink"
-                            >
-                              {cat.label}
-                            </Link>
-                            {cat.subcategories.length > 0 && (
-                              <button
-                                type="button"
-                                aria-label={`Toggle ${cat.label} subcategories`}
-                                onClick={() => setOpenMobileCat(openMobileCat === cat.label ? null : cat.label)}
-                                className="p-1 text-neutral-400"
-                              >
-                                <FiChevronDown
-                                  className={`text-xs transition-transform ${openMobileCat === cat.label ? 'rotate-180' : ''}`}
-                                />
-                              </button>
-                            )}
-                          </div>
-                          {cat.subcategories.length > 0 && openMobileCat === cat.label && (
-                            <ul className="mt-2 flex flex-col gap-2 border-l border-neutral-200 pl-3">
-                              {cat.subcategories.map((sub) => (
-                                <li key={sub}>
-                                  <Link
-                                    to={categoryHref(sub)}
-                                    onClick={() => setMobileOpen(false)}
-                                    className="text-xs text-neutral-500 hover:text-brand-goldDark"
-                                  >
-                                    {sub}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
                   )}
-                </li>
-              ) : (
-                <li key={link.label} className="border-b border-neutral-100 py-2">
-                  <Link to={navHref(link)} onClick={() => setMobileOpen(false)}>
-                    {link.label}
-                  </Link>
-                </li>
-              )
-            )}
+                </div>
+                {cat.subcategories.length > 0 && openMobileCat === cat.label && (
+                  <ul className="mt-2 flex flex-col gap-2 border-l border-neutral-200 pl-3">
+                    {cat.subcategories.map((sub) => (
+                      <li key={sub}>
+                        <Link
+                          to={categoryHref(sub)}
+                          onClick={() => setMobileOpen(false)}
+                          className="text-xs text-neutral-500 hover:text-brand-goldDark"
+                        >
+                          {sub}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
           </ul>
           <Link to="/sign-in" onClick={() => setMobileOpen(false)} className="mt-3 flex items-center gap-2 text-sm text-neutral-600">
             <FiUser /> Login / Signup

@@ -57,23 +57,22 @@ export default function CartDrawer() {
   }, [isCartOpen, closeCart])
 
   return (
-    <div
-      className={`fixed inset-0 z-[90] ${isCartOpen ? '' : 'pointer-events-none'}`}
-      aria-hidden={!isCartOpen}
-    >
-      <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-          isCartOpen ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={closeCart}
-      />
+    <>
+      {isCartOpen && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm"
+          onClick={closeCart}
+          aria-hidden="true"
+        />
+      )}
 
       <div
-        className={`absolute right-0 top-0 flex h-full w-full max-w-[420px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          isCartOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed right-0 top-0 z-[91] flex h-full w-full max-w-[420px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          isCartOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
         role="dialog"
         aria-label="Shopping cart"
+        aria-hidden={!isCartOpen}
       >
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
           <h2 className="flex items-center gap-2 text-base font-bold text-ink">
@@ -196,6 +195,6 @@ export default function CartDrawer() {
           </>
         )}
       </div>
-    </div>
+    </>
   )
 }

@@ -42,8 +42,8 @@ export default function Hero() {
         >
           <img
             src={slide.img}
-            alt={slide.baked ? 'The New Proxy — A Pro Experience' : slide.title}
-            className="h-full w-full object-cover"
+            alt={slide.baked ? slide.alt : slide.title}
+            className={`h-full w-full ${slide.baked ? 'object-cover object-top' : 'object-contain'}`}
           />
           {!slide.baked && <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />}
 
@@ -66,7 +66,7 @@ export default function Hero() {
             )}
           </div>
 
-          {slide.baked && (
+          {slide.showBluetoothBadge && (
             <span className="absolute bottom-[9%] right-[3%] flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">
               <FiBluetooth /> Bluetooth
             </span>
@@ -91,7 +91,7 @@ export default function Hero() {
         <FiChevronRight className="text-lg" />
       </button>
 
-      <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+      <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2 rounded-full bg-black/20 px-3 py-1.5 backdrop-blur">
         {heroSlides.map((slide, i) => (
           <button
             key={slide.id}

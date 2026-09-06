@@ -1,5 +1,5 @@
 import { FiStar, FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
-import { testimonials } from '../data/siteData'
+import { testimonials, googleRating } from '../data/siteData'
 
 function GoogleBadge() {
   return (
@@ -14,7 +14,12 @@ export default function Testimonials() {
     <section className="relative container-x py-14">
       <div className="mb-10 text-center">
         <h2 className="font-display text-3xl font-semibold text-ink">Straight From The Source.</h2>
-        <p className="mt-2 text-neutral-500">Hear from our happy customers.</p>
+        <p className="mt-2 flex items-center justify-center gap-1.5 text-neutral-500">
+          <GoogleBadge />
+          <span className="font-semibold text-ink">{googleRating.value}</span>
+          <FiStar className="text-brand-gold" />
+          <span>&middot; {googleRating.count} Google reviews</span>
+        </p>
       </div>
 
       <button
@@ -54,23 +59,25 @@ export default function Testimonials() {
               </div>
               <GoogleBadge />
             </div>
-            <FiStar className="mb-2 text-brand-gold" />
+            <div className="mb-2 flex gap-0.5">
+              {Array.from({ length: t.rating || 5 }).map((_, i) => (
+                <FiStar key={i} className="text-brand-gold" />
+              ))}
+            </div>
             <p className="flex-1 text-sm text-neutral-600">{t.text}</p>
-            {t.hasPhotos && (
-              <div className="mt-4 flex gap-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <span key={i} className="h-10 w-10 rounded bg-neutral-300" />
-                ))}
-              </div>
-            )}
           </div>
         ))}
       </div>
 
       <div className="mt-10 flex justify-center">
-        <button type="button" className="inline-flex items-center gap-2 rounded bg-ink px-6 py-3 text-sm font-semibold text-white hover:bg-neutral-800">
+        <a
+          href="https://www.google.com/maps/place/Triple+Buzz+Smoke+Shop/@30.435557,-97.655932,15z/data=!3m1!5s0x8644cefde3fca73f:0xb99d102ba4e00a12!4m8!3m7!1s0x8644cf7ff25a6ab1:0x75cfcd480193d5ad!8m2!3d30.4355575!4d-97.6559325!9m1!1b1!16s%2Fg%2F11vwd98dff?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDkwMi4wIKXMDSoASAFQAw%3D%3D"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded bg-ink px-6 py-3 text-sm font-semibold text-white hover:bg-neutral-800"
+        >
           Leave a Review <FiArrowRight />
-        </button>
+        </a>
       </div>
     </section>
   )

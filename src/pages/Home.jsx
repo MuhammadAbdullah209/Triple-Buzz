@@ -18,7 +18,7 @@ export default function Home() {
     <>
       <Hero />
       <CategoryGrid />
-      <FeatureProductSection title="Shisha Hookah" promoImg={shishaPromo} products={SHISHA_PRODUCTS} />
+      <FeatureProductSection title="Shisha Hookah" promoImg={shishaPromo} products={SHISHA_PRODUCTS} columns={6} />
       <VapesSection />
       <FeatureProductSection title="Torches & Lighter" promoImg={torchPromo} products={TORCH_PRODUCTS} />
       <TrustSection />

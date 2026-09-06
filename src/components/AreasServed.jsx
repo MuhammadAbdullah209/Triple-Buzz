@@ -1,5 +1,9 @@
 import { FiNavigation } from 'react-icons/fi'
-import { areas } from '../data/siteData'
+import { areas, siteConfig } from '../data/siteData'
+
+const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(
+  `${siteConfig.name} Smoke Shop, ${siteConfig.address}`
+)}&output=embed`
 
 export default function AreasServed() {
   return (
@@ -37,10 +41,11 @@ export default function AreasServed() {
               key={area.title}
               className="h-56 w-full overflow-hidden rounded-md border border-neutral-200 bg-neutral-200"
             >
-              <img
-                src={`https://placehold.co/640x300/e5e5e5/666666?text=Map+-+${encodeURIComponent(area.title)}`}
-                alt={`Map of ${area.title}`}
-                className="h-full w-full object-cover"
+              <iframe
+                title={`Map - ${area.title}`}
+                src={mapSrc}
+                className="h-full w-full border-0"
+                referrerPolicy="no-referrer-when-downgrade"
               />
             </div>
           ))}

@@ -1,7 +1,7 @@
-import iconTruck from '../assets/images/icon-truck.png'
-import iconDelivery from '../assets/images/icon-delivery.png'
-import iconDiscount from '../assets/images/icon-discount.png'
-import iconSupport from '../assets/images/icon-support.png'
+import iconTruck from '../assets/images/icons/icon-fast-delivery.svg'
+import iconDelivery from '../assets/images/icons/icon-return-refund.svg'
+import iconDiscount from '../assets/images/icons/icon-member-discount.svg'
+import iconSupport from '../assets/images/icons/icon-support-24-7.svg'
 import hookahProduct from '../assets/images/hookah-product.png'
 
 const trustFeatures = [
