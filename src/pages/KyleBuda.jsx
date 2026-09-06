@@ -2,12 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiPlus, FiMinus } from 'react-icons/fi'
 import vapeDevices from '../assets/images/hero-slide-2.png'
+import areasServePhoto from '../assets/images/areas-we-serve.png'
 import CategoryGrid from '../components/CategoryGrid'
 import Testimonials from '../components/Testimonials'
 import BlogSection from '../components/BlogSection'
-
-const mapEmbed = (label) =>
-  `https://www.google.com/maps?q=${encodeURIComponent(label)}&t=k&z=12&output=embed`
 
 const FAQS = [
   {
@@ -90,11 +88,10 @@ export default function KyleBuda() {
       <section className="container-x py-14">
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
           <div className="h-64 overflow-hidden rounded-md border border-neutral-200 lg:h-80">
-            <iframe
-              title="Kyle, TX aerial view"
-              src={mapEmbed('Kyle, Texas')}
-              className="h-full w-full border-0"
-              referrerPolicy="no-referrer-when-downgrade"
+            <img
+              src={areasServePhoto}
+              alt="Aerial view of the Kyle and Buda area"
+              className="h-full w-full object-cover"
             />
           </div>
           <div>
@@ -130,11 +127,10 @@ export default function KyleBuda() {
             </p>
           </div>
           <div className="order-1 h-64 overflow-hidden rounded-md border border-neutral-200 lg:order-2 lg:h-80">
-            <iframe
-              title="Buda, TX satellite view"
-              src={mapEmbed('Downtown Buda, Texas')}
-              className="h-full w-full border-0"
-              referrerPolicy="no-referrer-when-downgrade"
+            <img
+              src={areasServePhoto}
+              alt="Aerial view of the Kyle and Buda area"
+              className="h-full w-full object-cover"
             />
           </div>
         </div>
