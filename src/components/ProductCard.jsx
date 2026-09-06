@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 
 export default function ProductCard({ product, flat = false }) {
-  const { addItem } = useCart()
+  const { addItem, openCart } = useCart()
 
   return (
     <div className={`group flex flex-col bg-white ${flat ? '' : 'overflow-hidden rounded-md border border-neutral-200 card-shadow'}`}>
@@ -34,7 +34,10 @@ export default function ProductCard({ product, flat = false }) {
       <button
         type="button"
         disabled={product.soldOut}
-        onClick={() => addItem(product, 1)}
+        onClick={() => {
+          addItem(product, 1)
+          openCart()
+        }}
         className={`btn-dark disabled:cursor-not-allowed disabled:opacity-40 ${flat ? '' : 'rounded-t-none'}`}
       >
         {product.soldOut ? 'Sold Out' : 'Add to cart'}

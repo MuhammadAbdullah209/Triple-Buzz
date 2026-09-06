@@ -3,6 +3,8 @@ import ScrollToTop from './components/ScrollToTop'
 import AnnouncementBar from './components/AnnouncementBar'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import AgeVerificationModal from './components/AgeVerificationModal'
+import CartDrawer from './components/CartDrawer'
 import Home from './pages/Home'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
@@ -14,6 +16,8 @@ import VerifyOtp from './pages/VerifyOtp'
 export default function App() {
   return (
     <div className="min-h-screen bg-white">
+      <AgeVerificationModal />
+      <CartDrawer />
       <ScrollToTop />
       <AnnouncementBar />
       <Header />

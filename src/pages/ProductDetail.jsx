@@ -108,7 +108,7 @@ const TABS = ['Reviews', 'Discussion', 'FAQs']
 export default function ProductDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const { addItem } = useCart()
+  const { addItem, openCart } = useCart()
   const product = findProductBySlug(slug)
   const [qty, setQty] = useState(1)
   const [showFullDesc, setShowFullDesc] = useState(false)
@@ -408,6 +408,7 @@ export default function ProductDetail() {
                 onClick={() => {
                   addItem(product, qty)
                   setAdded(true)
+                  openCart()
                   setTimeout(() => setAdded(false), 1500)
                 }}
                 className="flex items-center justify-center gap-2 rounded-md border border-ink px-6 py-3 text-sm font-bold uppercase tracking-wide text-ink transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40"

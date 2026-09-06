@@ -58,8 +58,8 @@ export default function Header() {
   const [openMobileCat, setOpenMobileCat] = useState(null)
   const [megaOpen, setMegaOpen] = useState(false)
   const hoverTimer = useRef(null)
-  const { items } = useCart()
-  const cartCount = items.reduce((s, i) => s + i.qty, 0)
+  const { items, openCart } = useCart()
+  const cartCount = items.length
 
   useEffect(() => () => clearTimeout(hoverTimer.current), [])
 
@@ -136,7 +136,7 @@ export default function Header() {
             <span className="font-semibold text-ink">My account</span>
           </Link>
           <span className="hidden h-8 w-px bg-neutral-200 sm:block" />
-          <Link to="/cart" className="flex items-center gap-2">
+          <button type="button" onClick={openCart} className="flex items-center gap-2">
             <span className="relative text-xl text-neutral-700">
               <FiShoppingCart />
               <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white">
@@ -144,7 +144,7 @@ export default function Header() {
               </span>
             </span>
             <span className="font-semibold text-ink">Cart</span>
-          </Link>
+          </button>
         </div>
 
         <div onMouseEnter={openMega} onMouseLeave={closeMega}>
