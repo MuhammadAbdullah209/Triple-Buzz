@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import AboutUsBlock from '../components/AboutUsBlock'
 import { siteConfig } from '../data/siteData'
 
 export default function TermsConditions() {
@@ -16,7 +15,7 @@ export default function TermsConditions() {
       </section>
 
       <section className="container-x py-10">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4 text-sm leading-relaxed text-blue-600">
+        <div className="mx-auto flex max-w-3xl flex-col gap-4 text-sm leading-relaxed text-ink">
           <p>
             Welcome to Triple Buzz Smoke and Vape. By using our website and purchasing our products, you agree
             to the following terms and conditions.
@@ -61,8 +60,6 @@ export default function TermsConditions() {
           </p>
         </div>
       </section>
-
-      <AboutUsBlock />
     </>
   )
 }

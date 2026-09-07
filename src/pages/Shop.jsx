@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
@@ -14,11 +14,17 @@ export default function Shop() {
   const [selectedCategories, setSelectedCategories] = useState(
     initialCategory ? initialCategory.split(',').filter(Boolean) : []
   )
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [sortBy, setSortBy] = useState('latest')
   const [perPage, setPerPage] = useState(9)
   const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get('search') || '')
+    setPage(1)
+  }, [searchParams])
 
   const toggleCategory = (cat) => {
     setSelectedCategories((prev) =>
@@ -28,13 +34,15 @@ export default function Shop() {
   }
 
   const filtered = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase()
     let list = products.filter((p) => {
       const inCategory =
         selectedCategories.length === 0 || selectedCategories.includes(p.category)
       const price = parseFloat(p.price)
       const aboveMin = !minPrice || price >= parseFloat(minPrice)
       const belowMax = !maxPrice || price <= parseFloat(maxPrice)
-      return inCategory && aboveMin && belowMax
+      const matchesSearch = !term || p.name.toLowerCase().includes(term)
+      return inCategory && aboveMin && belowMax && matchesSearch
     })
 
     if (sortBy === 'price-asc') {
@@ -44,7 +52,7 @@ export default function Shop() {
     }
 
     return list
-  }, [products, selectedCategories, minPrice, maxPrice, sortBy])
+  }, [products, selectedCategories, searchQuery, minPrice, maxPrice, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const currentPage = Math.min(page, totalPages)
@@ -138,6 +146,21 @@ export default function Shop() {
           </aside>
 
           <div>
+            {searchQuery.trim() && (
+              <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+                <span>
+                  Showing results for <span className="font-semibold text-ink">&ldquo;{searchQuery.trim()}&rdquo;</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="font-semibold text-ink hover:text-brand-gold"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
             <div className="mb-6 flex flex-wrap items-center gap-6">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-ink">Sort by</span>

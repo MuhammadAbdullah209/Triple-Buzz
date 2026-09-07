@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FiSearch, FiUser, FiShoppingCart, FiMenu, FiX, FiChevronDown, FiLogOut } from 'react-icons/fi'
 import Logo from './Logo'
 import { shopCategories, categoryFilterMap } from '../data/siteData'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useProducts } from '../context/ProductsContext'
+import { fetchBlogs } from '../lib/api'
 
 function categoryHref(name) {
   const mapped = categoryFilterMap[name]
@@ -14,10 +16,18 @@ function categoryHref(name) {
 
 function SearchModal({ open, onClose }) {
   const inputRef = useRef(null)
+  const navigate = useNavigate()
+  const { products } = useProducts()
+  const [query, setQuery] = useState('')
+  const [posts, setPosts] = useState([])
 
   useEffect(() => {
     if (!open) return
+    setQuery('')
     inputRef.current?.focus()
+    fetchBlogs(1)
+      .then((data) => setPosts(data.blogs ?? []))
+      .catch(() => setPosts([]))
     const onKeyDown = (e) => {
       if (e.key === 'Escape') onClose()
     }
@@ -26,6 +36,28 @@ function SearchModal({ open, onClose }) {
   }, [open, onClose])
 
   if (!open) return null
+
+  const trimmed = query.trim()
+  const term = trimmed.toLowerCase()
+  const productMatches = trimmed
+    ? products.filter((p) => p.name.toLowerCase().includes(term)).slice(0, 5)
+    : []
+  const postMatches = trimmed
+    ? posts.filter((p) => p.title.toLowerCase().includes(term)).slice(0, 4)
+    : []
+  const hasAnyMatches = productMatches.length > 0 || postMatches.length > 0
+
+  const goToProductResults = () => {
+    if (!trimmed) return
+    navigate(`/shop?search=${encodeURIComponent(trimmed)}`)
+    onClose()
+  }
+
+  const goToBlogResults = () => {
+    if (!trimmed) return
+    navigate(`/blog?search=${encodeURIComponent(trimmed)}`)
+    onClose()
+  }
 
   return (
     <div
@@ -37,7 +69,7 @@ function SearchModal({ open, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-ink">Search Products</h2>
+          <h2 className="text-lg font-bold text-ink">Search</h2>
           <button
             type="button"
             aria-label="Close search"
@@ -49,12 +81,17 @@ function SearchModal({ open, onClose }) {
         </div>
         <form
           className="flex w-full items-center overflow-hidden rounded border border-neutral-200"
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={(e) => {
+            e.preventDefault()
+            goToProductResults()
+          }}
         >
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search for products..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search products & blog posts..."
             className="w-full px-4 py-3 text-sm text-ink outline-none"
           />
           <button
@@ -65,6 +102,91 @@ function SearchModal({ open, onClose }) {
             <FiSearch />
           </button>
         </form>
+
+        {trimmed && (
+          <div className="mt-3 flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
+            {!hasAnyMatches ? (
+              <p className="px-1 py-2 text-sm text-neutral-500">
+                No results found for &ldquo;{trimmed}&rdquo;.
+              </p>
+            ) : (
+              <>
+                {productMatches.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <p className="px-1 pb-1 text-xs font-bold uppercase tracking-wide text-neutral-400">
+                      Products
+                    </p>
+                    {productMatches.map((p) => (
+                      <Link
+                        key={p.slug}
+                        to={`/shop/${p.slug}`}
+                        onClick={onClose}
+                        className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-black/5"
+                      >
+                        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded bg-neutral-100">
+                          {p.image && (
+                            <img src={p.image} alt={p.name} className="h-full w-full object-contain" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink">{p.name}</p>
+                          <p className="text-xs text-neutral-400">{p.category}</p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold text-ink">${p.price}</span>
+                      </Link>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={goToProductResults}
+                      className="mt-1 self-start px-2 text-sm font-semibold text-ink hover:text-brand-gold"
+                    >
+                      View all product results for &ldquo;{trimmed}&rdquo;
+                    </button>
+                  </div>
+                )}
+
+                {postMatches.length > 0 && (
+                  <div className="flex flex-col gap-1 border-t border-neutral-100 pt-3">
+                    <p className="px-1 pb-1 text-xs font-bold uppercase tracking-wide text-neutral-400">
+                      Blog
+                    </p>
+                    {postMatches.map((post) => (
+                      <Link
+                        key={post._id}
+                        to={`/blog/${post._id}`}
+                        onClick={onClose}
+                        className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-black/5"
+                      >
+                        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded bg-neutral-100">
+                          {post.image?.url && (
+                            <img
+                              src={post.image.url}
+                              alt={post.title}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink">{post.title}</p>
+                          {post.category && (
+                            <p className="text-xs text-neutral-400">{post.category}</p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={goToBlogResults}
+                      className="mt-1 self-start px-2 text-sm font-semibold text-ink hover:text-brand-gold"
+                    >
+                      View all blog results for &ldquo;{trimmed}&rdquo;
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -74,14 +196,25 @@ const OPEN_DELAY = 80
 const CLOSE_DELAY = 250
 
 export default function Header() {
+  const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openMobileCat, setOpenMobileCat] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [openCat, setOpenCat] = useState(null)
+  const [mobileQuery, setMobileQuery] = useState('')
   const timerRef = useRef(null)
   const { items, openCart } = useCart()
   const cartCount = items.length
   const { isLoggedIn, logout } = useAuth()
+
+  const submitMobileSearch = (e) => {
+    e.preventDefault()
+    const trimmed = mobileQuery.trim()
+    if (!trimmed) return
+    navigate(`/shop?search=${encodeURIComponent(trimmed)}`)
+    setMobileQuery('')
+    setMobileOpen(false)
+  }
 
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
@@ -201,16 +334,21 @@ export default function Header() {
 
       {mobileOpen && (
         <div className="border-t border-neutral-200 bg-white px-4 py-4 lg:hidden">
-          <div className="mb-4 flex items-center overflow-hidden rounded border border-neutral-200">
+          <form
+            onSubmit={submitMobileSearch}
+            className="mb-4 flex items-center overflow-hidden rounded border border-neutral-200"
+          >
             <input
               type="text"
+              value={mobileQuery}
+              onChange={(e) => setMobileQuery(e.target.value)}
               placeholder="Search..."
               className="w-full px-4 py-2 text-sm text-ink outline-none"
             />
-            <button type="button" className="flex items-center justify-center bg-brand-gold px-4 py-2.5 text-white">
+            <button type="submit" className="flex items-center justify-center bg-brand-gold px-4 py-2.5 text-white">
               <FiSearch />
             </button>
-          </div>
+          </form>
           <ul className="flex flex-col gap-1 text-sm font-medium text-neutral-600">
             <li className="border-b border-neutral-100 py-2">
               <Link to="/" onClick={() => setMobileOpen(false)} className="font-semibold text-ink">

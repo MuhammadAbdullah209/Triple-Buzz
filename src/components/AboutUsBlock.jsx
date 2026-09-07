@@ -21,23 +21,23 @@ export default function AboutUsBlock() {
       <section className="container-x py-14">
         <h2 className="text-center font-display text-4xl font-bold text-ink sm:text-5xl">About Us</h2>
 
-        <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-6 text-center text-[15px] leading-relaxed">
-          <p className="text-blue-600">
+        <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-6 text-center text-[15px] leading-relaxed text-ink">
+          <p>
             Welcome to Triple Buzz Smoke and Vape! We are dedicated to providing Austin and Pflugerville with a
             diverse selection of smoke and vape products, top-notch customer service, and a unique shopping
             experience.
           </p>
-          <p className="text-orange-700">
+          <p>
             We pride ourselves on offering a wide range of products, including vapes, E-Juice, Delta8, CBD, glass
             water pipes, hookahs, and more. Our mission is to cater to the needs of our customers by providing
             customized care and high-quality products.
           </p>
-          <p className="text-purple-700">
+          <p>
             Whether you&rsquo;re a seasoned user or new to the smoke and vape world, our knowledgeable team is here
             to guide you. Thank you for choosing Triple Buzz Smoke and Vape &mdash; a higher standard in smoke and
             vape shopping.
           </p>
-          <p className="text-blue-600">
+          <p>
             Visit us at {siteConfig.address}, TX, or contact us at {siteConfig.phone}.
           </p>
         </div>

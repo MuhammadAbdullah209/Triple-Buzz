@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { fetchBlogs, ApiError } from '../lib/api'
 
 function formatDate(value) {
@@ -11,14 +11,20 @@ function formatDate(value) {
 }
 
 export default function Blog() {
-  const [posts, setPosts] = useState(null)
+  const [allPosts, setAllPosts] = useState(null)
   const [error, setError] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get('search') || '')
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
     fetchBlogs(1)
       .then((data) => {
-        if (!cancelled) setPosts(data.blogs ?? [])
+        if (!cancelled) setAllPosts(data.blogs ?? [])
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'Could not load blog posts.')
@@ -27,6 +33,21 @@ export default function Blog() {
       cancelled = true
     }
   }, [])
+
+  const posts = useMemo(() => {
+    if (!allPosts) return allPosts
+    const term = searchQuery.trim().toLowerCase()
+    if (!term) return allPosts
+    return allPosts.filter(
+      (p) => p.title.toLowerCase().includes(term) || p.excerpt?.toLowerCase().includes(term)
+    )
+  }, [allPosts, searchQuery])
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    searchParams.delete('search')
+    setSearchParams(searchParams, { replace: true })
+  }
 
   return (
     <>
@@ -41,12 +62,26 @@ export default function Blog() {
       </section>
 
       <section className="container-x py-10">
-        <h1 className="section-title mb-8">Blog</h1>
+        <h1 className="section-title mb-4">Blog</h1>
+
+        {searchQuery.trim() && (
+          <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+            <span>
+              Showing results for <span className="font-semibold text-ink">&ldquo;{searchQuery.trim()}&rdquo;</span>
+            </span>
+            <button type="button" onClick={clearSearch} className="font-semibold text-ink hover:text-brand-gold">
+              Clear
+            </button>
+          </div>
+        )}
 
         {!posts && !error && <p className="text-sm text-neutral-500">Loading posts…</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {posts && posts.length === 0 && (
+        {posts && posts.length === 0 && !searchQuery.trim() && (
           <p className="text-sm text-neutral-500">No blog posts yet — check back soon.</p>
+        )}
+        {posts && posts.length === 0 && searchQuery.trim() && (
+          <p className="text-sm text-neutral-500">No posts match your search.</p>
         )}
 
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
