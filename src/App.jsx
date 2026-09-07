@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import useTabAttention from './hooks/useTabAttention'
 import ScrollToTop from './components/ScrollToTop'
 import AnnouncementBar from './components/AnnouncementBar'
 import Header from './components/Header'
@@ -32,6 +33,8 @@ import CreateAccount from './pages/CreateAccount'
 import VerifyOtp from './pages/VerifyOtp'
 
 export default function App() {
+  useTabAttention()
+
   return (
     <div className="min-h-screen bg-white">
       <AgeVerificationModal />
