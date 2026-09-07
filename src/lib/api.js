@@ -137,8 +137,8 @@ export function removeAvatar() {
 
 /* ---------- Products ---------- */
 
-export function fetchProducts(page = 1, site = 'triplebuzz') {
-  return api(`/Product/allproducts?page=${page}${site ? `&site=${site}` : ''}`)
+export function fetchProducts(page = 1, site = 'triplebuzz', limit = 100) {
+  return api(`/Product/allproducts?page=${page}&limit=${limit}${site ? `&site=${site}` : ''}`)
 }
 
 export function fetchProductById(id) {
@@ -209,4 +209,8 @@ export function subscribeNewsletter(email) {
 
 export function fetchBlogs(page = 1, site = 'triplebuzz') {
   return api(`/Blog?page=${page}${site ? `&site=${site}` : ''}`)
+}
+
+export function fetchBlogById(id) {
+  return api(`/Blog/${id}`)
 }

@@ -1,18 +1,6 @@
 // All content below is placeholder/dummy data for layout purposes.
 // Swap the logo, images, and copy once real client assets are provided.
 
-import {
-  SHISHA_PRODUCTS,
-  VAPE_PRODUCTS,
-  TORCH_PRODUCTS,
-  ASHTRAY_PRODUCTS,
-  GUMMY_PRODUCTS,
-  DRINK_PRODUCTS,
-  DETOX_PRODUCTS,
-  FRAGRANCE_PRODUCTS,
-  ACCESSORY_PRODUCTS,
-} from './products'
-
 export const siteConfig = {
   name: 'Triple Buzz',
   tagline: 'Smoke & Vape Shop',
@@ -111,24 +99,6 @@ export const categoryFilterMap = {
   Detox: ['Detox'],
   Perfumes: ['Perfumes'],
 }
-
-export const categories = [
-  { id: 1, name: 'Shisha Hookah', count: SHISHA_PRODUCTS.length, img: SHISHA_PRODUCTS[0].image },
-  { id: 2, name: 'THC Vapes', count: VAPE_PRODUCTS.length, img: VAPE_PRODUCTS[0].image },
-  { id: 3, name: 'Torches & Lighters', count: TORCH_PRODUCTS.length, img: TORCH_PRODUCTS[0].image },
-  { id: 4, name: 'Ashtrays & Trays', count: ASHTRAY_PRODUCTS.length, img: ASHTRAY_PRODUCTS[0].image },
-  { id: 5, name: 'THC Gummies', count: GUMMY_PRODUCTS.length, img: GUMMY_PRODUCTS[0].image },
-  { id: 6, name: 'THC Drinks', count: DRINK_PRODUCTS.length, img: DRINK_PRODUCTS[0].image },
-  { id: 7, name: 'Detox', count: DETOX_PRODUCTS.length, img: DETOX_PRODUCTS[0].image },
-  { id: 8, name: 'Perfumes', count: FRAGRANCE_PRODUCTS.length, img: FRAGRANCE_PRODUCTS[0].image },
-  { id: 9, name: 'Smoking Accessories', count: ACCESSORY_PRODUCTS.length, img: ACCESSORY_PRODUCTS[0].image },
-]
-
-export const blogPosts = [
-  { id: 1, title: 'Kick Back with the Best Shisha in Pflugerville at Triple Buzz Smoke Shop', badge: null },
-  { id: 2, title: 'THC Vape Buying Guide: Pods, Disposables & Batteries Explained', badge: 'NEW' },
-  { id: 3, title: '5 Torch Lighter Safety Tips Every Dab Rig Owner Should Know', badge: null },
-]
 
 // Real reviews pulled from the shop's live Google Business listing (snapshot
 // taken 2026-09-07). Not a live feed — see the note where `testimonials` is

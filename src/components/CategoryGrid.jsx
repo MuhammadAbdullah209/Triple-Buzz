@@ -1,21 +1,25 @@
 import { Link } from 'react-router-dom'
 import SectionHeader from './SectionHeader'
-import { categories } from '../data/siteData'
+import { useProducts } from '../context/ProductsContext'
 
 export default function CategoryGrid() {
+  const { categories, loading } = useProducts()
+
+  if (!loading && categories.length === 0) return null
+
   return (
     <section className="container-x py-10">
       <SectionHeader title="Shop By Categories" to="/shop" />
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         {categories.map((cat) => (
           <Link
-            key={cat.id}
+            key={cat.name}
             to={`/shop?category=${encodeURIComponent(cat.name)}`}
             className="group flex flex-col gap-2 rounded-md border border-neutral-200 p-2.5 transition-colors hover:border-ink"
           >
             <div className="aspect-square overflow-hidden rounded bg-black">
               <img
-                src={cat.img}
+                src={cat.image}
                 alt={cat.name}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               />

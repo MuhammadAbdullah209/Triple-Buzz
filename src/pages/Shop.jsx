@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import { ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
-import { ALL_PRODUCTS, CATEGORIES } from '../data/products'
+import { useProducts } from '../context/ProductsContext'
 
 const RATINGS = [5, 4, 3, 2, 1]
 
 export default function Shop() {
+  const { products, categoryNames, loading, error } = useProducts()
   const [searchParams] = useSearchParams()
   const initialCategory = searchParams.get('category')
   const [selectedCategories, setSelectedCategories] = useState(
@@ -27,7 +28,7 @@ export default function Shop() {
   }
 
   const filtered = useMemo(() => {
-    let list = ALL_PRODUCTS.filter((p) => {
+    let list = products.filter((p) => {
       const inCategory =
         selectedCategories.length === 0 || selectedCategories.includes(p.category)
       const price = parseFloat(p.price)
@@ -43,13 +44,13 @@ export default function Shop() {
     }
 
     return list
-  }, [selectedCategories, minPrice, maxPrice, sortBy])
+  }, [products, selectedCategories, minPrice, maxPrice, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const currentPage = Math.min(page, totalPages)
   const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage)
 
-  const relatedProducts = ALL_PRODUCTS.slice(0, 6)
+  const relatedProducts = products.slice(0, 6)
 
   return (
     <>
@@ -70,7 +71,7 @@ export default function Shop() {
                 />
                 All
               </label>
-              {CATEGORIES.map((cat) => (
+              {categoryNames.map((cat) => (
                 <label key={cat} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
                   <input
                     type="checkbox"
@@ -167,7 +168,11 @@ export default function Shop() {
               </div>
             </div>
 
-            {pageItems.length === 0 ? (
+            {loading ? (
+              <p className="py-16 text-center text-sm text-neutral-500">Loading products…</p>
+            ) : error ? (
+              <p className="py-16 text-center text-sm text-red-600">{error}</p>
+            ) : pageItems.length === 0 ? (
               <p className="py-16 text-center text-sm text-neutral-500">
                 No products match your filters.
               </p>

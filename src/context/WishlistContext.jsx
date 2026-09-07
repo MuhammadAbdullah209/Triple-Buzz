@@ -1,26 +1,9 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { fetchWishlist, addToWishlistRequest, removeFromWishlistRequest } from '../lib/api'
-import { findProductByBackendId } from '../data/products'
+import { normalizeProduct } from './ProductsContext'
 
 const WishlistContext = createContext(null)
-
-function fromBackendProduct(p) {
-  // Prefer the local catalogue entry (real slug, curated photo/meta) — this
-  // backend record only wins when it's somehow not in products.js at all.
-  const local = findProductByBackendId(p._id)
-  if (local) return local
-  return {
-    backendId: p._id,
-    slug: p._id,
-    name: p.name,
-    price: p.price,
-    image: p.image?.[0]?.url,
-    category: p.category,
-    brand: p.brand,
-    soldOut: p.stock <= 0,
-  }
-}
 
 export function WishlistProvider({ children }) {
   const { isLoggedIn, ready } = useAuth()
@@ -36,7 +19,7 @@ export function WishlistProvider({ children }) {
     let cancelled = false
     fetchWishlist()
       .then((data) => {
-        if (!cancelled) setItems((data.products ?? []).map(fromBackendProduct))
+        if (!cancelled) setItems((data.products ?? []).map(normalizeProduct))
       })
       .catch(() => {
         if (!cancelled) setItems([])
@@ -54,9 +37,7 @@ export function WishlistProvider({ children }) {
     try {
       await addToWishlistRequest(product.backendId)
       setItems((prev) =>
-        prev.some((i) => i.backendId === product.backendId)
-          ? prev
-          : [{ ...product, slug: product.backendId }, ...prev]
+        prev.some((i) => i.backendId === product.backendId) ? prev : [product, ...prev]
       )
     } finally {
       setPending((s) => {

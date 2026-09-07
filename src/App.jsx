@@ -21,6 +21,7 @@ import Taylor from './pages/Taylor'
 import Pflugerville from './pages/Pflugerville'
 import SanMarcos from './pages/SanMarcos'
 import Blog from './pages/Blog'
+import BlogPost from './pages/BlogPost'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="/pflugerville" element={<Pflugerville />} />
         <Route path="/san-marcos" element={<SanMarcos />} />
         <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:slug" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />

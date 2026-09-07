@@ -9,18 +9,26 @@ import BlogSection from '../components/BlogSection'
 import Newsletter from '../components/Newsletter'
 import Testimonials from '../components/Testimonials'
 import AreasServed from '../components/AreasServed'
-import { SHISHA_PRODUCTS, TORCH_PRODUCTS } from '../data/products'
+import { useProducts } from '../context/ProductsContext'
 import shishaPromo from '../assets/images/hero-slide-3.png'
 import torchPromo from '../assets/images/hero-slide-4.png'
 
 export default function Home() {
+  const { products } = useProducts()
+  const shishaProducts = products.filter((p) => p.category === 'Shisha Hookah')
+  const torchProducts = products.filter((p) => p.category === 'Torches & Lighters')
+
   return (
     <>
       <Hero />
       <CategoryGrid />
-      <FeatureProductSection title="Shisha Hookah" promoImg={shishaPromo} products={SHISHA_PRODUCTS} columns={6} />
+      {shishaProducts.length > 0 && (
+        <FeatureProductSection title="Shisha Hookah" promoImg={shishaPromo} products={shishaProducts} columns={6} />
+      )}
       <VapesSection />
-      <FeatureProductSection title="Torches & Lighter" promoImg={torchPromo} products={TORCH_PRODUCTS} />
+      {torchProducts.length > 0 && (
+        <FeatureProductSection title="Torches & Lighter" promoImg={torchPromo} products={torchProducts} />
+      )}
       <TrustSection />
       <BrandsSection />
       <AboutSection />

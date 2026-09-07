@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { createOrder, ApiError } from '../lib/api'
-import { ALL_PRODUCTS } from '../data/products'
+import { useProducts } from '../context/ProductsContext'
 import { siteConfig } from '../data/siteData'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
@@ -68,6 +68,7 @@ export default function Cart() {
   const { items, updateQty, removeItem, toggleProtection, subtotal, protectionTotal, clearCart } =
     useCart()
   const { isLoggedIn } = useAuth()
+  const { products: allProducts } = useProducts()
 
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState('')
@@ -110,7 +111,7 @@ export default function Cart() {
     ? `${shippingAddress.line1}, ${shippingAddress.city}, ${shippingAddress.province} ${shippingAddress.postalCode}`
     : PICKUP_LABEL
 
-  const relatedProducts = ALL_PRODUCTS.filter(
+  const relatedProducts = allProducts.filter(
     (p) => !items.some((i) => i.slug === p.slug)
   ).slice(0, 6)
 
@@ -181,7 +182,7 @@ export default function Cart() {
       day: 'numeric',
       year: 'numeric',
     })
-    const orderRelated = ALL_PRODUCTS.slice(0, 6)
+    const orderRelated = allProducts.slice(0, 6)
 
     return (
       <>

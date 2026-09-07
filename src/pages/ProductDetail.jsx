@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { FaHeart } from 'react-icons/fa'
-import { ALL_PRODUCTS, findProductBySlug } from '../data/products'
 import { siteConfig } from '../data/siteData'
 import { StarIcon, CartIcon, ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
@@ -9,6 +8,7 @@ import AreasServed from '../components/AreasServed'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
+import { useProducts } from '../context/ProductsContext'
 import { fetchProductReviews, writeReviewRequest, ApiError } from '../lib/api'
 
 const CATEGORY_BLURB = {
@@ -100,7 +100,8 @@ export default function ProductDetail() {
   const { addItem, openCart } = useCart()
   const { toggleItem, isWishlisted } = useWishlist()
   const { isLoggedIn } = useAuth()
-  const product = findProductBySlug(slug)
+  const { products, findBySlug, loading: productsLoading } = useProducts()
+  const product = findBySlug(slug)
   const [qty, setQty] = useState(1)
   const [showFullDesc, setShowFullDesc] = useState(false)
   const [activeTab, setActiveTab] = useState('Reviews')
@@ -127,6 +128,14 @@ export default function ProductDetail() {
     }
   }, [product?.backendId])
 
+  if (productsLoading) {
+    return (
+      <section className="container-x py-20 text-center">
+        <p className="text-sm text-neutral-500">Loading product…</p>
+      </section>
+    )
+  }
+
   if (!product) {
     return (
       <section className="container-x py-20 text-center">
@@ -140,7 +149,7 @@ export default function ProductDetail() {
 
   const wishlisted = isWishlisted(product.backendId)
   const subtotal = (parseFloat(product.price) * qty).toFixed(2)
-  const related = ALL_PRODUCTS.filter((p) => p.slug !== product.slug).slice(0, 6)
+  const related = products.filter((p) => p.slug !== product.slug).slice(0, 6)
   const blurb =
     CATEGORY_BLURB[product.category] ||
     `Part of our ${product.category} lineup at ${siteConfig.name}.`
