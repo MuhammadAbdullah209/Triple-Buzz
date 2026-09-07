@@ -24,6 +24,8 @@ import Blog from './pages/Blog'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
+import Profile from './pages/Profile'
+import Wishlist from './pages/Wishlist'
 import SignIn from './pages/SignIn'
 import CreateAccount from './pages/CreateAccount'
 import VerifyOtp from './pages/VerifyOtp'
@@ -56,6 +58,8 @@ export default function App() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:slug" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/create-account/verify" element={<VerifyOtp />} />

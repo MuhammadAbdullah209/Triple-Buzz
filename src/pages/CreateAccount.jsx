@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import BrandBadge from '../components/BrandBadge'
 import AreasServed from '../components/AreasServed'
+import { useAuth } from '../context/AuthContext'
+import { ApiError } from '../lib/api'
 
 function EyeIcon({ off }) {
   return (
@@ -30,21 +32,35 @@ function Field({ label, error, children }) {
 
 export default function CreateAccount() {
   const navigate = useNavigate()
+  const { register: registerUser } = useAuth()
   const [showPw, setShowPw] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm({ mode: 'onBlur', defaultValues: { country: 'United States', agreed: true } })
+  } = useForm({ mode: 'onBlur', defaultValues: { agreed: true } })
 
   const password = watch('password')
 
   const onSubmit = async (data) => {
-    console.log('Create account:', data)
-    navigate('/create-account/verify', { state: { identifier: data.email } })
+    setFormError('')
+    try {
+      await registerUser({
+        firstname: data.firstname,
+        lastname: data.lastname,
+        email: data.email,
+        password: data.password,
+        phno: data.mobile,
+        gender: data.gender || undefined,
+      })
+      navigate('/create-account/verify', { state: { identifier: data.email } })
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Could not create your account.')
+    }
   }
 
   return (
@@ -57,6 +73,41 @@ export default function CreateAccount() {
           <div className="mt-4 border-b border-neutral-200" />
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 flex flex-col gap-5">
+              {formError && (
+                <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                  {formError}
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="First Name" error={errors.firstname}>
+                  <input
+                    type="text"
+                    placeholder="First name"
+                    aria-invalid={errors.firstname ? 'true' : 'false'}
+                    className={`w-full rounded-md border px-4 py-2.5 text-sm text-ink placeholder:text-neutral-400 focus:outline-none focus:ring-2 ${
+                      errors.firstname
+                        ? 'border-red-400 focus:ring-red-200'
+                        : 'border-neutral-200 focus:ring-brand-gold/40'
+                    }`}
+                    {...register('firstname', {
+                      required: 'First name is required',
+                      pattern: { value: /^[a-zA-Z\s]+$/, message: 'Letters only' },
+                    })}
+                  />
+                </Field>
+                <Field label="Last Name" error={errors.lastname}>
+                  <input
+                    type="text"
+                    placeholder="Last name"
+                    className="w-full rounded-md border border-neutral-200 px-4 py-2.5 text-sm text-ink placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                    {...register('lastname', {
+                      pattern: { value: /^[a-zA-Z\s]+$/, message: 'Letters only' },
+                    })}
+                  />
+                </Field>
+              </div>
+
               <Field label="Email" error={errors.email}>
                 <input
                   type="email"
@@ -80,7 +131,7 @@ export default function CreateAccount() {
               <Field label="Mobile Number" error={errors.mobile}>
                 <input
                   type="tel"
-                  placeholder="Mobile Number"
+                  placeholder="+15125551234"
                   aria-invalid={errors.mobile ? 'true' : 'false'}
                   className={`w-full rounded-md border px-4 py-2.5 text-sm text-ink placeholder:text-neutral-400 focus:outline-none focus:ring-2 ${
                     errors.mobile
@@ -88,13 +139,26 @@ export default function CreateAccount() {
                       : 'border-neutral-200 focus:ring-brand-gold/40'
                   }`}
                   {...register('mobile', {
+                    required: 'Mobile number is required',
                     pattern: {
-                      value: /^[0-9+\-\s()]{7,20}$/,
-                      message: 'Enter a valid phone number',
+                      value: /^\+?\d{10,15}$/,
+                      message: 'Digits only (10-15), optional leading +',
                     },
                   })}
                 />
               </Field>
+
+              <div>
+                <p className="mb-1.5 text-sm font-bold text-ink">Gender (optional)</p>
+                <div className="flex items-center gap-6">
+                  {['male', 'female', 'other'].map((g) => (
+                    <label key={g} className="flex items-center gap-2 text-sm capitalize text-neutral-600">
+                      <input type="radio" value={g} className="h-4 w-4 accent-brand-gold" {...register('gender')} />
+                      {g}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               <Field label="Password" error={errors.password}>
                 <div className="relative">
@@ -110,9 +174,9 @@ export default function CreateAccount() {
                     {...register('password', {
                       required: 'Password is required',
                       pattern: {
-                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
+                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/,
                         message:
-                          'Must be at least 8 characters with 1 upper case letter, 1 lower case letter and 1 number',
+                          'Must be at least 6 characters with 1 upper case letter, 1 lower case letter, 1 number and 1 special character (@$!%*?&)',
                       },
                     })}
                   />
@@ -127,8 +191,8 @@ export default function CreateAccount() {
                 </div>
                 {!errors.password && (
                   <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-                    Password at least 8 characters and includes at least 1 upper case letter, 1
-                    lower case letter and 1 number.
+                    At least 6 characters with 1 upper case letter, 1 lower case letter, 1 number
+                    and 1 special character (@$!%*?&).
                   </p>
                 )}
               </Field>
@@ -157,34 +221,6 @@ export default function CreateAccount() {
                   >
                     <EyeIcon off={showConfirm} />
                   </button>
-                </div>
-              </Field>
-
-              <Field label="Country or region" error={errors.country}>
-                <div className="relative">
-                  <select
-                    aria-invalid={errors.country ? 'true' : 'false'}
-                    className={`w-full appearance-none rounded-md border bg-white px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 ${
-                      errors.country
-                        ? 'border-red-400 focus:ring-red-200'
-                        : 'border-neutral-200 focus:ring-brand-gold/40'
-                    }`}
-                    {...register('country', { required: 'Please select a country or region' })}
-                  >
-                    <option value="">Select a country</option>
-                    <option>United States</option>
-                    <option>Canada</option>
-                    <option>United Kingdom</option>
-                  </select>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
-                  >
-                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
                 </div>
               </Field>
 

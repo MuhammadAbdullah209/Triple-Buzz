@@ -19,6 +19,7 @@ import muskyZeinaPerfume from './../assets/images/products/musky-zeina-perfume.p
 import aleafGrinder from './../assets/images/products/aleaf-grinder.jpg'
 import quartzBanger from './../assets/images/products/quartz-banger.jpg'
 import torchPhoto from '../assets/images/hero-slide-4.png'
+import { BACKEND_PRODUCT_IDS } from './backendProductIds'
 
 export function slugify(str) {
   return str
@@ -254,7 +255,10 @@ const accessories = [
 ]
 
 function withCategory(list, category) {
-  return list.map((p) => ({ ...p, category, slug: slugify(p.name) }))
+  return list.map((p) => {
+    const slug = slugify(p.name)
+    return { ...p, category, slug, backendId: BACKEND_PRODUCT_IDS[slug] }
+  })
 }
 
 export const SHISHA_PRODUCTS = withCategory(shisha, 'Shisha Hookah')
@@ -281,4 +285,8 @@ export const ALL_PRODUCTS = [
 
 export function findProductBySlug(slug) {
   return ALL_PRODUCTS.find((p) => p.slug === slug)
+}
+
+export function findProductByBackendId(backendId) {
+  return ALL_PRODUCTS.find((p) => p.backendId === backendId)
 }

@@ -21,6 +21,7 @@ export function CartProvider({ children }) {
         ...prev,
         {
           slug: product.slug,
+          backendId: product.backendId,
           name: product.name,
           price: parseFloat(product.price),
           image: product.image,

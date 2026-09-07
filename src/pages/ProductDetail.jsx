@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { FaHeart } from 'react-icons/fa'
 import { ALL_PRODUCTS, findProductBySlug } from '../data/products'
 import { siteConfig } from '../data/siteData'
 import { StarIcon, CartIcon, ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
 import { useCart } from '../context/CartContext'
+import { useWishlist } from '../context/WishlistContext'
+import { useAuth } from '../context/AuthContext'
+import { fetchProductReviews, writeReviewRequest, ApiError } from '../lib/api'
 
 const CATEGORY_BLURB = {
   'Shisha Hookah':
@@ -32,27 +36,6 @@ const PRODUCT_FAQS = [
   },
 ]
 
-const REVIEWS = [
-  {
-    name: 'Jordan M.',
-    date: 'Aug 24, 2026',
-    rating: 5,
-    text: 'Great quality and fast pickup. Staff walked me through everything I needed to know.',
-  },
-  {
-    name: 'Casey R.',
-    date: 'Aug 15, 2026',
-    rating: 5,
-    text: 'This is my go-to now. Consistent quality every time I visit the shop.',
-  },
-  {
-    name: 'Alex P.',
-    date: 'Aug 3, 2026',
-    rating: 5,
-    text: 'Exactly what I was looking for. Will definitely order again.',
-  },
-]
-
 function MinusIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
@@ -65,18 +48,6 @@ function PlusIconSmall() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function ChatIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-      <path
-        d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.8 8.8 0 0 1-4-1L3 20l1-5.5A8.38 8.38 0 0 1 3 11.5 8.5 8.5 0 1 1 21 11.5z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   )
 }
@@ -103,18 +74,58 @@ function ShareIcon() {
   )
 }
 
+function StarPicker({ value, onChange }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          aria-label={`${n} star${n > 1 ? 's' : ''}`}
+          onClick={() => onChange(n)}
+          className="text-xl"
+        >
+          <StarIcon className={`h-5 w-5 ${n <= value ? 'text-brand-gold' : 'text-black/10'}`} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
 const TABS = ['Reviews', 'Discussion', 'FAQs']
 
 export default function ProductDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const { addItem, openCart } = useCart()
+  const { toggleItem, isWishlisted } = useWishlist()
+  const { isLoggedIn } = useAuth()
   const product = findProductBySlug(slug)
   const [qty, setQty] = useState(1)
   const [showFullDesc, setShowFullDesc] = useState(false)
   const [activeTab, setActiveTab] = useState('Reviews')
   const [openFaq, setOpenFaq] = useState(2)
   const [added, setAdded] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewText, setReviewText] = useState('')
+  const [reviewsData, setReviewsData] = useState(null)
+  const [reviewsError, setReviewsError] = useState('')
+
+  useEffect(() => {
+    if (!product?.backendId) return
+    let cancelled = false
+    fetchProductReviews(product.backendId)
+      .then((data) => {
+        if (!cancelled) setReviewsData(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setReviewsError(err instanceof ApiError ? err.message : 'Could not load reviews.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [product?.backendId])
 
   if (!product) {
     return (
@@ -127,11 +138,30 @@ export default function ProductDetail() {
     )
   }
 
+  const wishlisted = isWishlisted(product.backendId)
   const subtotal = (parseFloat(product.price) * qty).toFixed(2)
   const related = ALL_PRODUCTS.filter((p) => p.slug !== product.slug).slice(0, 6)
   const blurb =
     CATEGORY_BLURB[product.category] ||
     `Part of our ${product.category} lineup at ${siteConfig.name}.`
+
+  const reviews = reviewsData?.reviews ?? []
+  const summary = reviewsData?.summary ?? { average: 0, total: 0, breakdown: {} }
+
+  const submitReview = async (e) => {
+    e.preventDefault()
+    if (!reviewRating || !product.backendId) return
+    try {
+      await writeReviewRequest(product.backendId, { rating: reviewRating, comment: reviewText })
+      setShowReviewForm(false)
+      setReviewRating(0)
+      setReviewText('')
+      const data = await fetchProductReviews(product.backendId)
+      setReviewsData(data)
+    } catch (err) {
+      setReviewsError(err instanceof ApiError ? err.message : 'Could not submit your review.')
+    }
+  }
 
   return (
     <>
@@ -192,16 +222,17 @@ export default function ProductDetail() {
                     <div className="flex items-center gap-3">
                       <StarIcon className="h-8 w-8 text-brand-gold" />
                       <div>
-                        <p className="text-3xl font-extrabold text-ink">5.0/5.0</p>
+                        <p className="text-3xl font-extrabold text-ink">{summary.average.toFixed(1)}/5.0</p>
                         <p className="text-xs text-neutral-500">
-                          {REVIEWS.length} ratings &bull; {REVIEWS.length} reviews
+                          {summary.total} rating{summary.total === 1 ? '' : 's'} &bull; {summary.total} review
+                          {summary.total === 1 ? '' : 's'}
                         </p>
                       </div>
                     </div>
                     <div className="mt-5 flex flex-col gap-2">
                       {[5, 4, 3, 2, 1].map((star) => {
-                        const count = REVIEWS.filter((r) => r.rating === star).length
-                        const pct = Math.round((count / REVIEWS.length) * 100)
+                        const count = summary.breakdown?.[star] ?? 0
+                        const pct = summary.total ? Math.round((count / summary.total) * 100) : 0
                         return (
                           <div key={star} className="flex items-center gap-2 text-xs text-neutral-600">
                             <span className="flex w-8 items-center gap-0.5">
@@ -229,39 +260,99 @@ export default function ProductDetail() {
                           <option>Highest rated</option>
                         </select>
                       </div>
-                      <button
-                        type="button"
-                        className="rounded-md border border-brand-gold px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-goldDark hover:bg-amber-50"
-                      >
-                        Write Review
-                      </button>
+                      {isLoggedIn ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowReviewForm((v) => !v)}
+                          className="rounded-md border border-brand-gold px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-goldDark hover:bg-amber-50"
+                        >
+                          {showReviewForm ? 'Cancel' : 'Write Review'}
+                        </button>
+                      ) : (
+                        <Link
+                          to="/sign-in"
+                          className="text-xs font-semibold text-ink hover:text-brand-gold"
+                        >
+                          Sign in to write a review
+                        </Link>
+                      )}
                     </div>
 
+                    {reviewsError && (
+                      <p className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        {reviewsError}
+                      </p>
+                    )}
+
+                    {showReviewForm && (
+                      <form
+                        onSubmit={submitReview}
+                        className="mb-6 flex flex-col gap-3 rounded-xl border border-brand-gold/40 bg-amber-50 p-4"
+                      >
+                        <StarPicker value={reviewRating} onChange={setReviewRating} />
+                        <textarea
+                          rows={3}
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          placeholder="Share your experience with this product…"
+                          className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brand-gold/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!reviewRating}
+                          className="btn-gold self-start disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Submit Review
+                        </button>
+                      </form>
+                    )}
+
                     <div className="flex flex-col gap-6">
-                      {REVIEWS.map((r) => (
-                        <div key={r.name} className="border-b border-neutral-200 pb-6">
-                          <div className="flex items-center gap-3">
-                            <span className="grid h-9 w-9 place-items-center rounded-full bg-ink text-xs font-bold text-white">
-                              {r.name[0]}
-                            </span>
-                            <div>
-                              <p className="text-sm font-bold text-ink">{r.name}</p>
-                              <p className="text-xs text-neutral-400">{r.date}</p>
+                      {reviews.map((r) => {
+                        const name =
+                          [r.user?.firstname, r.user?.lastname].filter(Boolean).join(' ') || 'A customer'
+                        const date = new Date(r.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                        return (
+                          <div key={r._id} className="border-b border-neutral-200 pb-6">
+                            <div className="flex items-center gap-3">
+                              <span className="grid h-9 w-9 place-items-center rounded-full bg-ink text-xs font-bold text-white">
+                                {name[0]}
+                              </span>
+                              <div>
+                                <p className="text-sm font-bold text-ink">{name}</p>
+                                <p className="text-xs text-neutral-400">{date}</p>
+                              </div>
+                              {r.status === 'pending' && (
+                                <span className="ml-auto rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-goldDark">
+                                  Pending approval
+                                </span>
+                              )}
                             </div>
+                            <div className="mt-2 flex gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <StarIcon
+                                  key={i}
+                                  className={`h-3.5 w-3.5 ${
+                                    i < r.rating ? 'text-brand-gold' : 'text-black/10'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            {r.comment && (
+                              <p className="mt-2 text-sm leading-relaxed text-neutral-600">{r.comment}</p>
+                            )}
                           </div>
-                          <div className="mt-2 flex gap-0.5">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <StarIcon
-                                key={i}
-                                className={`h-3.5 w-3.5 ${
-                                  i < r.rating ? 'text-brand-gold' : 'text-black/10'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <p className="mt-2 text-sm leading-relaxed text-neutral-600">{r.text}</p>
-                        </div>
-                      ))}
+                        )
+                      })}
+                      {reviews.length === 0 && (
+                        <p className="text-sm text-neutral-500">
+                          No reviews yet — be the first to share your thoughts.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -320,9 +411,9 @@ export default function ProductDetail() {
 
             <div className="mt-2 flex items-center gap-1.5 text-sm text-neutral-600">
               <StarIcon className="h-4 w-4 text-brand-gold" />
-              <span className="font-semibold text-ink">5.0/5.0</span>
+              <span className="font-semibold text-ink">{summary.average.toFixed(1)}/5.0</span>
               <span className="text-neutral-300">|</span>
-              <span>{REVIEWS.length} Reviews</span>
+              <span>{summary.total} Reviews</span>
               <span className="text-neutral-300">|</span>
               <span>300 sold</span>
             </div>
@@ -419,12 +510,13 @@ export default function ProductDetail() {
             </div>
 
             <div className="mt-5 flex items-center gap-5 text-sm text-neutral-600">
-              <button type="button" className="flex items-center gap-1.5 hover:text-ink">
-                <ChatIcon /> Chat
-              </button>
-              <span className="h-4 w-px bg-neutral-200" />
-              <button type="button" className="flex items-center gap-1.5 hover:text-ink">
-                <HeartOutline /> Wishlist
+              <button
+                type="button"
+                onClick={() => toggleItem(product)}
+                className={`flex items-center gap-1.5 hover:text-ink ${wishlisted ? 'text-red-500' : ''}`}
+              >
+                {wishlisted ? <FaHeart className="text-red-500" /> : <HeartOutline />}
+                {wishlisted ? 'Wishlisted' : 'Wishlist'}
               </button>
               <span className="h-4 w-px bg-neutral-200" />
               <button type="button" className="flex items-center gap-1.5 hover:text-ink">

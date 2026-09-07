@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FiSearch, FiUser, FiShoppingCart, FiMenu, FiX, FiChevronDown } from 'react-icons/fi'
+import { FiSearch, FiUser, FiShoppingCart, FiMenu, FiX, FiChevronDown, FiLogOut } from 'react-icons/fi'
 import Logo from './Logo'
 import { shopCategories, categoryFilterMap } from '../data/siteData'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 
 function categoryHref(name) {
   const mapped = categoryFilterMap[name]
@@ -80,6 +81,7 @@ export default function Header() {
   const timerRef = useRef(null)
   const { items, openCart } = useCart()
   const cartCount = items.length
+  const { isLoggedIn, logout } = useAuth()
 
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
@@ -163,10 +165,25 @@ export default function Header() {
           >
             <FiSearch className="text-lg" />
           </button>
-          <Link to="/sign-in" className="hidden flex-col items-start leading-tight sm:flex">
-            <span className="text-neutral-500">Login / Signup</span>
-            <span className="font-semibold text-ink">My account</span>
-          </Link>
+          {isLoggedIn ? (
+            <div className="hidden flex-col items-start leading-tight sm:flex">
+              <button
+                type="button"
+                onClick={logout}
+                className="text-neutral-500 hover:text-red-500"
+              >
+                Logout
+              </button>
+              <Link to="/profile" className="font-semibold text-ink hover:text-brand-goldDark">
+                My account
+              </Link>
+            </div>
+          ) : (
+            <Link to="/sign-in" className="hidden flex-col items-start leading-tight sm:flex">
+              <span className="text-neutral-500">Login / Signup</span>
+              <span className="font-semibold text-ink">My account</span>
+            </Link>
+          )}
           <span className="hidden h-8 w-px bg-neutral-200 sm:block" />
           <button type="button" onClick={openCart} className="flex items-center gap-2">
             <span className="relative text-xl text-neutral-700">
@@ -241,9 +258,31 @@ export default function Header() {
               </li>
             ))}
           </ul>
-          <Link to="/sign-in" onClick={() => setMobileOpen(false)} className="mt-3 flex items-center gap-2 text-sm text-neutral-600">
-            <FiUser /> Login / Signup
-          </Link>
+          {isLoggedIn ? (
+            <>
+              <Link
+                to="/profile"
+                onClick={() => setMobileOpen(false)}
+                className="mt-3 flex items-center gap-2 text-sm text-neutral-600"
+              >
+                <FiUser /> My account
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  logout()
+                  setMobileOpen(false)
+                }}
+                className="mt-3 flex items-center gap-2 text-sm text-red-500"
+              >
+                <FiLogOut /> Logout
+              </button>
+            </>
+          ) : (
+            <Link to="/sign-in" onClick={() => setMobileOpen(false)} className="mt-3 flex items-center gap-2 text-sm text-neutral-600">
+              <FiUser /> Login / Signup
+            </Link>
+          )}
         </div>
       )}
     </header>

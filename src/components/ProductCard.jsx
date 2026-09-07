@@ -1,23 +1,42 @@
 import { Link } from 'react-router-dom'
+import { FiHeart } from 'react-icons/fi'
+import { FaHeart } from 'react-icons/fa'
 import { useCart } from '../context/CartContext'
+import { useWishlist } from '../context/WishlistContext'
 
 export default function ProductCard({ product, flat = false }) {
   const { addItem, openCart } = useCart()
+  const { toggleItem, isWishlisted } = useWishlist()
+  const wishlisted = isWishlisted(product.backendId)
 
   return (
     <div className={`group flex flex-col bg-white ${flat ? '' : 'overflow-hidden rounded-md border border-neutral-200 card-shadow'}`}>
-      <Link to={`/shop/${product.slug}`} className="relative aspect-square overflow-hidden bg-neutral-100">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-        {product.soldOut && (
-          <span className="absolute left-2 top-2  bg-ink px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-            Sold Out
-          </span>
-        )}
-      </Link>
+      <div className="relative">
+        <Link to={`/shop/${product.slug}`} className="block aspect-square overflow-hidden bg-neutral-100">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          {product.soldOut && (
+            <span className="absolute left-2 top-2  bg-ink px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              Sold Out
+            </span>
+          )}
+        </Link>
+        <button
+          type="button"
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleItem(product)
+          }}
+          className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-neutral-500 shadow transition hover:text-red-500"
+        >
+          {wishlisted ? <FaHeart className="text-red-500" /> : <FiHeart />}
+        </button>
+      </div>
       <div className={`flex flex-1 flex-col gap-1 ${flat ? 'px-2.5 pt-2.5 pb-1.5' : 'px-3 pt-3 pb-2'}`}>
         {product.brand && (
           <p className={`font-medium uppercase tracking-wide text-neutral-400 ${flat ? 'text-[10px]' : 'text-[11px]'}`}>

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { createOrder, ApiError } from '../lib/api'
 import { ALL_PRODUCTS } from '../data/products'
 import { siteConfig } from '../data/siteData'
 import ProductCard from '../components/ProductCard'
@@ -13,14 +15,6 @@ const COUPONS = {
 }
 
 const PICKUP_LABEL = `Pickup at ${siteConfig.address}`
-
-function generateOrderNumber() {
-  const part1 = Math.floor(100000000 + Math.random() * 900000000)
-  const part2 = Math.floor(1000 + Math.random() * 9000)
-  const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26))
-  const part3 = Math.floor(10 + Math.random() * 90)
-  return `INV/${part1}/TB/${part2}-${letter}${part3}`
-}
 
 function MinusIcon() {
   return (
@@ -73,6 +67,10 @@ function CardIcon() {
 export default function Cart() {
   const { items, updateQty, removeItem, toggleProtection, subtotal, protectionTotal, clearCart } =
     useCart()
+  const { isLoggedIn } = useAuth()
+
+  const [placing, setPlacing] = useState(false)
+  const [placeError, setPlaceError] = useState('')
 
   const [address, setAddress] = useState(null)
   const [editingAddress, setEditingAddress] = useState(false)
@@ -134,25 +132,50 @@ export default function Cart() {
     setShippingAddress((prev) => (prev ? addressForm : prev))
   }
 
-  const placeOrder = () => {
-    setPlacedOrder({
-      items,
-      itemCount,
-      subtotal,
-      protectionTotal,
-      discount,
-      grandTotal,
-      paymentMethod,
-      shippingLabel,
-      orderNumber: generateOrderNumber(),
-      date: new Date(),
-    })
-    setPlaced(true)
-    clearCart()
+  const missingLink = items.some((i) => !i.backendId)
+
+  const placeOrder = async () => {
+    if (!address) {
+      setPlaceError('Add a shipping/contact address before placing your order.')
+      return
+    }
+    setPlaceError('')
+    setPlacing(true)
+    try {
+      const { order } = await createOrder({
+        items: items.map((i) => ({ productId: i.backendId, quantity: i.qty })),
+        shippingAddress: {
+          street: address.line1,
+          city: address.city,
+          province: address.province,
+          postalCode: address.postalCode,
+          country: address.country,
+        },
+        // No real payment processing is wired up — every order is settled in
+        // person, same as this shop's existing pickup/cash/card flow.
+        paymentMethod: 'Cash On Delivery',
+      })
+      setPlacedOrder({
+        order,
+        items,
+        itemCount,
+        subtotal,
+        protectionTotal,
+        discount,
+        paymentMethod,
+        shippingLabel,
+      })
+      setPlaced(true)
+      clearCart()
+    } catch (err) {
+      setPlaceError(err instanceof ApiError ? err.message : 'Could not place your order.')
+    } finally {
+      setPlacing(false)
+    }
   }
 
   if (placed && placedOrder) {
-    const dateLabel = placedOrder.date.toLocaleDateString('en-US', {
+    const dateLabel = new Date(placedOrder.order.createdAt).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -170,7 +193,7 @@ export default function Cart() {
               </svg>
             </div>
             <h1 className="mt-4 text-center text-2xl font-bold text-ink">Thanks for Your Order!</h1>
-            <p className="mt-1 text-center text-xs text-neutral-400">{placedOrder.orderNumber}</p>
+            <p className="mt-1 text-center text-xs text-neutral-400">{placedOrder.order._id}</p>
 
             <div className="mt-6 border-t border-neutral-200 pt-4">
               <p className="text-sm font-bold text-ink">Transaction Date</p>
@@ -252,24 +275,17 @@ export default function Cart() {
               </div>
             </div>
 
-            {placedOrder.discount > 0 && (
-              <div className="mt-3 flex items-center justify-between text-sm text-brand-goldDark">
-                <span>Discount</span>
-                <span className="font-semibold">-${placedOrder.discount.toFixed(2)}</span>
-              </div>
-            )}
-
             <div className="mt-4 flex items-center justify-between border-t border-neutral-200 pt-4">
               <span className="text-sm font-bold text-ink">Grand total</span>
               <span className="text-2xl font-extrabold text-ink">
-                ${placedOrder.grandTotal.toFixed(2)}
+                ${placedOrder.order.totalAmount.toFixed(2)}
               </span>
             </div>
 
             <div className="mt-4 flex items-center justify-between">
               <span className="text-sm font-bold text-ink">Status</span>
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-brand-goldDark">
-                Success
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold capitalize text-brand-goldDark">
+                {placedOrder.order.status}
               </span>
             </div>
 
@@ -670,13 +686,31 @@ export default function Cart() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={placeOrder}
-                className="btn-gold mt-5 w-full"
-              >
-                Pay Now
-              </button>
+              {placeError && (
+                <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                  {placeError}
+                </p>
+              )}
+
+              {!isLoggedIn ? (
+                <Link to="/sign-in" className="btn-gold mt-5 block w-full text-center">
+                  Sign In to Checkout
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={placeOrder}
+                  disabled={placing || missingLink}
+                  className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {placing ? 'Placing Order…' : 'Pay Now'}
+                </button>
+              )}
+              {missingLink && isLoggedIn && (
+                <p className="mt-2 text-center text-xs text-red-500">
+                  Some items in your cart aren&rsquo;t linked to the store catalogue yet.
+                </p>
+              )}
               <p className="mt-2 text-center text-xs text-neutral-500">
                 No charge today &mdash; you pay in store when you pick up.
               </p>

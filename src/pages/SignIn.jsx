@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import BrandBadge from '../components/BrandBadge'
 import AreasServed from '../components/AreasServed'
 import { siteConfig } from '../data/siteData'
+import { useAuth } from '../context/AuthContext'
+import { ApiError } from '../lib/api'
 
 function EyeIcon({ off }) {
   return (
@@ -63,18 +65,34 @@ function AppleIcon() {
 }
 
 export default function SignIn() {
+  const navigate = useNavigate()
   const [showPw, setShowPw] = useState(false)
   const [signedIn, setSignedIn] = useState(false)
+  const [formError, setFormError] = useState('')
+  const { login } = useAuth()
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm({ mode: 'onBlur', defaultValues: { savePassword: true } })
 
   const onSubmit = async (data) => {
-    console.log('Sign in:', data)
-    await new Promise((r) => setTimeout(r, 400))
-    setSignedIn(true)
+    setFormError('')
+    try {
+      await login(data.identifier, data.password)
+      setSignedIn(true)
+    } catch (err) {
+      if (err instanceof ApiError && err.payload?.verified === false) {
+        navigate('/create-account/verify', { state: { identifier: err.payload.email } })
+        return
+      }
+      if (err instanceof ApiError && err.status === 400) {
+        setError('password', { message: err.message })
+        return
+      }
+      setFormError(err.message || 'Could not sign in. Please try again.')
+    }
   }
 
   return (
@@ -89,17 +107,23 @@ export default function SignIn() {
 
             {signedIn ? (
               <div className="mt-6 rounded-md border border-brand-gold/40 bg-amber-50 p-4 text-sm text-ink">
-                You&rsquo;re signed in! Welcome back to {siteConfig.name}.
+                You&rsquo;re signed in! Welcome back to {siteConfig.name}.{' '}
+                <Link to="/profile" className="font-semibold underline hover:text-brand-goldDark">
+                  Go to your profile
+                </Link>
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 flex flex-col gap-5">
+                {formError && (
+                  <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                    {formError}
+                  </p>
+                )}
                 <div>
-                  <label className="mb-1.5 block text-sm font-bold text-ink">
-                    Email or mobile phone number
-                  </label>
+                  <label className="mb-1.5 block text-sm font-bold text-ink">Email</label>
                   <input
-                    type="text"
-                    placeholder="Email or Mobile phone Number"
+                    type="email"
+                    placeholder="Email address"
                     aria-invalid={errors.identifier ? 'true' : 'false'}
                     className={`w-full rounded-md border px-4 py-2.5 text-sm text-ink placeholder:text-neutral-400 focus:outline-none focus:ring-2 ${
                       errors.identifier
@@ -107,11 +131,10 @@ export default function SignIn() {
                         : 'border-neutral-200 focus:ring-brand-gold/40'
                     }`}
                     {...register('identifier', {
-                      required: 'Enter your email or mobile phone number',
-                      validate: (value) => {
-                        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-                        const isPhone = /^[0-9+\-\s()]{7,20}$/.test(value)
-                        return isEmail || isPhone || 'Enter a valid email or phone number'
+                      required: 'Enter your email address',
+                      pattern: {
+                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                        message: 'Enter a valid email address',
                       },
                     })}
                   />
