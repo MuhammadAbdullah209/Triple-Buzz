@@ -4,6 +4,14 @@
 // admin portal needs one.
 export const API_BASE = 'https://triple-buzz-store-backend-one.vercel.app'
 
+// Public by design — Authorize.Net's Accept.js is meant to run with these
+// values exposed in the browser. The actual secret (Transaction Key) never
+// leaves the backend.
+export const AUTHORIZE_NET_API_LOGIN_ID = '8XE55zd6'
+export const AUTHORIZE_NET_PUBLIC_CLIENT_KEY =
+  '5PVp55YgbEy82AefASs9Kf4mp2BD4w9NQ3wLL7ZL5A2TbbQUYhJuxtnv25ZeC76W'
+export const AUTHORIZE_NET_MODE = 'production'
+
 const TOKEN_KEY = 'tb_access_token'
 
 export function getToken() {
@@ -185,6 +193,10 @@ export function fetchMyReviews() {
 
 export function createOrder(payload) {
   return api('/Order/create', { method: 'POST', auth: !!getToken(), body: payload })
+}
+
+export function chargeAuthorizeNetOrder(payload) {
+  return api('/Order/authorizenet/charge', { method: 'POST', auth: !!getToken(), body: payload })
 }
 
 export function fetchMyOrders(page = 1) {

@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { createOrder, ApiError } from '../lib/api'
+import { createOrder, chargeAuthorizeNetOrder, ApiError } from '../lib/api'
 import { useProducts } from '../context/ProductsContext'
 import { siteConfig } from '../data/siteData'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
-import PaymentMethodModal from '../components/PaymentMethodModal'
+import CardPaymentForm from '../components/CardPaymentForm'
 import ShippingAddressModal from '../components/ShippingAddressModal'
 
 const COUPONS = {
@@ -93,11 +93,8 @@ export default function Cart() {
 
   const [placed, setPlaced] = useState(false)
 
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState({
-    id: 'pickup',
-    label: 'Pay at pickup (card or cash)',
-  })
+  const [paymentMode, setPaymentMode] = useState('cod') // 'cod' | 'card'
+  const cardFormRef = useRef(null)
 
   const [shippingModalOpen, setShippingModalOpen] = useState(false)
   const [shippingAddress, setShippingAddress] = useState(null)
@@ -141,21 +138,39 @@ export default function Cart() {
       return
     }
     setPlaceError('')
+
+    const orderItems = items.map((i) => ({ productId: i.backendId, quantity: i.qty }))
+    const orderShippingAddress = {
+      street: address.line1,
+      city: address.city,
+      province: address.province,
+      postalCode: address.postalCode,
+      country: address.country,
+    }
+
     setPlacing(true)
     try {
-      const { order } = await createOrder({
-        items: items.map((i) => ({ productId: i.backendId, quantity: i.qty })),
-        shippingAddress: {
-          street: address.line1,
-          city: address.city,
-          province: address.province,
-          postalCode: address.postalCode,
-          country: address.country,
-        },
-        // No real payment processing is wired up — every order is settled in
-        // person, same as this shop's existing pickup/cash/card flow.
-        paymentMethod: 'Cash On Delivery',
-      })
+      let order
+      if (paymentMode === 'card') {
+        let opaqueData
+        try {
+          opaqueData = await cardFormRef.current.tokenize()
+        } catch (tokenizeErr) {
+          setPlaceError(tokenizeErr.message || 'Could not process your card. Please check the details and try again.')
+          return
+        }
+        ;({ order } = await chargeAuthorizeNetOrder({
+          items: orderItems,
+          shippingAddress: orderShippingAddress,
+          opaqueData,
+        }))
+      } else {
+        ;({ order } = await createOrder({
+          items: orderItems,
+          shippingAddress: orderShippingAddress,
+          paymentMethod: 'Cash On Delivery',
+        }))
+      }
       setPlacedOrder({
         order,
         items,
@@ -163,7 +178,6 @@ export default function Cart() {
         subtotal,
         protectionTotal,
         discount,
-        paymentMethod,
         shippingLabel,
       })
       setPlaced(true)
@@ -203,7 +217,7 @@ export default function Cart() {
 
             <div className="mt-4 border-t border-neutral-200 pt-4">
               <p className="text-sm font-bold text-ink">Payment Method</p>
-              <p className="mt-1 text-sm text-neutral-600">{placedOrder.paymentMethod.label}</p>
+              <p className="mt-1 text-sm text-neutral-600">{placedOrder.order.paymentMethod}</p>
             </div>
 
             <div className="mt-4 flex items-center justify-between border-t border-neutral-200 pt-4">
@@ -571,23 +585,30 @@ export default function Cart() {
             </div>
 
             <h2 className="mt-10 text-xl font-bold text-ink">Payment Method</h2>
-            <div className="mt-4 flex items-center justify-between rounded-xl border border-neutral-200 px-5 py-4">
-              <div className="flex items-center gap-3">
-                {paymentMethod.Badge ? (
-                  <paymentMethod.Badge />
-                ) : (
-                  <CardIcon className="text-brand-gold" />
-                )}
-                <span className="text-sm font-semibold text-ink">{paymentMethod.label}</span>
-              </div>
+            <div className="mt-4 flex overflow-hidden rounded-xl border border-neutral-200">
               <button
                 type="button"
-                onClick={() => setPaymentModalOpen(true)}
-                className="shrink-0 text-xs font-semibold text-ink hover:text-brand-gold"
+                onClick={() => setPaymentMode('cod')}
+                className={`flex flex-1 items-center justify-center gap-2 px-5 py-4 text-sm font-semibold ${
+                  paymentMode === 'cod' ? 'bg-amber-50 text-brand-goldDark' : 'text-neutral-500 hover:bg-black/5'
+                }`}
               >
-                Change Payment Method
+                <CardIcon className="h-4 w-4" />
+                Pay at Pickup
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMode('card')}
+                className={`flex flex-1 items-center justify-center gap-2 border-l border-neutral-200 px-5 py-4 text-sm font-semibold ${
+                  paymentMode === 'card' ? 'bg-amber-50 text-brand-goldDark' : 'text-neutral-500 hover:bg-black/5'
+                }`}
+              >
+                <CardIcon className="h-4 w-4" />
+                Credit / Debit Card
               </button>
             </div>
+
+            {paymentMode === 'card' && <CardPaymentForm ref={cardFormRef} />}
           </div>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -704,7 +725,7 @@ export default function Cart() {
                   disabled={placing || missingLink}
                   className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {placing ? 'Placing Order…' : 'Pay Now'}
+                  {placing ? 'Placing Order…' : paymentMode === 'card' ? 'Pay & Place Order' : 'Pay Now'}
                 </button>
               )}
               {missingLink && isLoggedIn && (
@@ -713,7 +734,9 @@ export default function Cart() {
                 </p>
               )}
               <p className="mt-2 text-center text-xs text-neutral-500">
-                No charge today &mdash; you pay in store when you pick up.
+                {paymentMode === 'card'
+                  ? 'Your card will be charged immediately.'
+                  : 'No charge today — you pay in store when you pick up.'}
               </p>
             </div>
           </aside>
@@ -737,12 +760,6 @@ export default function Cart() {
       )}
 
       <AreasServed />
-
-      <PaymentMethodModal
-        open={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
-        onConfirm={setPaymentMethod}
-      />
 
       <ShippingAddressModal
         open={shippingModalOpen}
