@@ -15,7 +15,7 @@ export const AUTHORIZE_NET_MODE = 'production'
 // Same PayPal business account backend as Double Apple — public client id,
 // safe to expose in the browser (PayPal's SDK is meant to run client-side).
 export const PAYPAL_CLIENT_ID =
-  'BAAiL3BFLwMM9Q7Y8OaY1OBHNxWldLqtKjzRbfQiYRrfKQCwq2Uz8oGok10ugofSeW32YjG_11sd2Rx4uM'
+  'BAAYzTRR_OEA-rXBUGBN0Yh3csUy_BgtgCGUrLRQIQ7DLRRoiQ2pPguKLUpFPi7ezhdql7cpghXaiWZ3pY'
 export const PAYPAL_CURRENCY = 'USD'
 
 const TOKEN_KEY = 'tb_access_token'
