@@ -12,6 +12,12 @@ export const AUTHORIZE_NET_PUBLIC_CLIENT_KEY =
   '5PVp55YgbEy82AefASs9Kf4mp2BD4w9NQ3wLL7ZL5A2TbbQUYhJuxtnv25ZeC76W'
 export const AUTHORIZE_NET_MODE = 'production'
 
+// Same PayPal business account backend as Double Apple — public client id,
+// safe to expose in the browser (PayPal's SDK is meant to run client-side).
+export const PAYPAL_CLIENT_ID =
+  'BAAiL3BFLwMM9Q7Y8OaY1OBHNxWldLqtKjzRbfQiYRrfKQCwq2Uz8oGok10ugofSeW32YjG_11sd2Rx4uM'
+export const PAYPAL_CURRENCY = 'USD'
+
 const TOKEN_KEY = 'tb_access_token'
 
 export function getToken() {
@@ -197,6 +203,14 @@ export function createOrder(payload) {
 
 export function chargeAuthorizeNetOrder(payload) {
   return api('/Order/authorizenet/charge', { method: 'POST', auth: !!getToken(), body: payload })
+}
+
+export function initiatePaypalOrder(payload) {
+  return api('/Order/paypal/create', { method: 'POST', auth: !!getToken(), body: payload })
+}
+
+export function capturePaypalOrder(paypalOrderId) {
+  return api(`/Order/paypal/capture/${paypalOrderId}`, { method: 'POST', auth: !!getToken() })
 }
 
 export function fetchMyOrders(page = 1) {

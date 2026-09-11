@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { FaCcPaypal } from 'react-icons/fa'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { createOrder, chargeAuthorizeNetOrder, ApiError } from '../lib/api'
@@ -8,6 +9,7 @@ import { siteConfig } from '../data/siteData'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
 import CardPaymentForm from '../components/CardPaymentForm'
+import PayPalCheckoutButton from '../components/PayPalCheckoutButton'
 import ShippingAddressModal from '../components/ShippingAddressModal'
 
 const COUPONS = {
@@ -64,6 +66,21 @@ function CardIcon() {
   )
 }
 
+function ChevronIcon({ className = '' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// Add another entry here to plug in a new payment provider — its collapsed
+// pill shows up in the row automatically and its panel renders on expand.
+const PAYMENT_GATEWAYS = [
+  { id: 'authorize', label: 'Card', icon: CardIcon },
+  { id: 'paypal', label: 'PayPal', icon: FaCcPaypal },
+]
+
 export default function Cart() {
   const { items, updateQty, removeItem, toggleProtection, subtotal, protectionTotal, clearCart } =
     useCart()
@@ -94,6 +111,7 @@ export default function Cart() {
   const [placed, setPlaced] = useState(false)
 
   const [paymentMode, setPaymentMode] = useState('cod') // 'cod' | 'card'
+  const [activeGateway, setActiveGateway] = useState('authorize') // which provider's panel is expanded
   const cardFormRef = useRef(null)
 
   const [shippingModalOpen, setShippingModalOpen] = useState(false)
@@ -132,26 +150,50 @@ export default function Cart() {
 
   const missingLink = items.some((i) => !i.backendId)
 
-  const placeOrder = async () => {
+  // Shared by the COD/card submit flow and the PayPal button's createOrder
+  // callback — validates the address and shapes the payload the backend
+  // expects. Returns null (after setting placeError) when invalid.
+  const buildOrderPayload = () => {
     if (!address) {
       setPlaceError('Add a shipping/contact address before placing your order.')
-      return
+      return null
     }
     setPlaceError('')
-
-    const orderItems = items.map((i) => ({ productId: i.backendId, quantity: i.qty }))
-    const orderShippingAddress = {
-      street: address.line1,
-      city: address.city,
-      province: address.province,
-      postalCode: address.postalCode,
-      country: address.country,
+    return {
+      items: items.map((i) => ({ productId: i.backendId, quantity: i.qty })),
+      shippingAddress: {
+        street: address.line1,
+        city: address.city,
+        province: address.province,
+        postalCode: address.postalCode,
+        country: address.country,
+      },
     }
+  }
+
+  const handleOrderPlaced = (order) => {
+    setPlacedOrder({
+      order,
+      items,
+      itemCount,
+      subtotal,
+      protectionTotal,
+      discount,
+      shippingLabel,
+    })
+    setPlaced(true)
+    clearCart()
+  }
+
+  const placeOrder = async () => {
+    const payload = buildOrderPayload()
+    if (!payload) return
+    const { items: orderItems, shippingAddress: orderShippingAddress } = payload
 
     setPlacing(true)
     try {
       let order
-      if (paymentMode === 'card') {
+      if (paymentMode === 'card' && activeGateway === 'authorize') {
         let opaqueData
         try {
           opaqueData = await cardFormRef.current.tokenize()
@@ -171,17 +213,7 @@ export default function Cart() {
           paymentMethod: 'Cash On Delivery',
         }))
       }
-      setPlacedOrder({
-        order,
-        items,
-        itemCount,
-        subtotal,
-        protectionTotal,
-        discount,
-        shippingLabel,
-      })
-      setPlaced(true)
-      clearCart()
+      handleOrderPlaced(order)
     } catch (err) {
       setPlaceError(err instanceof ApiError ? err.message : 'Could not place your order.')
     } finally {
@@ -608,7 +640,54 @@ export default function Cart() {
               </button>
             </div>
 
-            {paymentMode === 'card' && <CardPaymentForm ref={cardFormRef} />}
+            {paymentMode === 'card' && (
+              <>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {PAYMENT_GATEWAYS.map((gw) => {
+                    const Icon = gw.icon
+                    const isOpen = activeGateway === gw.id
+                    return (
+                      <button
+                        key={gw.id}
+                        type="button"
+                        onClick={() => setActiveGateway(isOpen ? null : gw.id)}
+                        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ${
+                          isOpen
+                            ? 'border-brand-gold bg-amber-50 text-brand-goldDark'
+                            : 'border-neutral-200 text-neutral-600 hover:bg-black/5'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {gw.label}
+                        <ChevronIcon
+                          className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {activeGateway === 'authorize' && <CardPaymentForm ref={cardFormRef} />}
+                {activeGateway === 'paypal' && (
+                  isLoggedIn ? (
+                    <PayPalCheckoutButton
+                      getOrderPayload={buildOrderPayload}
+                      onApproved={handleOrderPlaced}
+                      onError={setPlaceError}
+                    />
+                  ) : (
+                    <div className="mt-3 rounded-lg border border-neutral-200 p-3 text-center">
+                      <p className="text-xs text-neutral-500">
+                        <Link to="/sign-in" className="font-semibold text-ink hover:text-brand-gold">
+                          Sign in
+                        </Link>{' '}
+                        to check out with PayPal.
+                      </p>
+                    </div>
+                  )
+                )}
+              </>
+            )}
           </div>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -719,14 +798,16 @@ export default function Cart() {
                   Sign In to Checkout
                 </Link>
               ) : (
-                <button
-                  type="button"
-                  onClick={placeOrder}
-                  disabled={placing || missingLink}
-                  className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {placing ? 'Placing Order…' : paymentMode === 'card' ? 'Pay & Place Order' : 'Pay Now'}
-                </button>
+                (paymentMode === 'cod' || (paymentMode === 'card' && activeGateway === 'authorize')) && (
+                  <button
+                    type="button"
+                    onClick={placeOrder}
+                    disabled={placing || missingLink}
+                    className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {placing ? 'Placing Order…' : paymentMode === 'card' ? 'Pay & Place Order' : 'Pay Now'}
+                  </button>
+                )
               )}
               {missingLink && isLoggedIn && (
                 <p className="mt-2 text-center text-xs text-red-500">
@@ -735,7 +816,11 @@ export default function Cart() {
               )}
               <p className="mt-2 text-center text-xs text-neutral-500">
                 {paymentMode === 'card'
-                  ? 'Your card will be charged immediately.'
+                  ? activeGateway === 'paypal'
+                    ? 'Use the PayPal button above to complete your payment.'
+                    : activeGateway === 'authorize'
+                      ? 'Your card will be charged immediately.'
+                      : 'Choose a payment provider above to continue.'
                   : 'No charge today — you pay in store when you pick up.'}
               </p>
             </div>

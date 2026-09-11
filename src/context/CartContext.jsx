@@ -1,10 +1,28 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 const CartContext = createContext(null)
+const STORAGE_KEY = 'triplebuzz-cart'
+
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState(loadCart)
   const [isCartOpen, setIsCartOpen] = useState(false)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    } catch {
+      // ignore storage errors (private browsing, quota, etc.)
+    }
+  }, [items])
 
   const openCart = () => setIsCartOpen(true)
   const closeCart = () => setIsCartOpen(false)
