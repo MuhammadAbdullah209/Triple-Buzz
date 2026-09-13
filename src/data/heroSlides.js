@@ -1,4 +1,3 @@
-import slide1 from '../assets/images/hero-slide-1.png'
 import slide2 from '../assets/images/hero-slide-2.png'
 import slide3 from '../assets/images/hero-slide-3.png'
 import slide4 from '../assets/images/hero-slide-4.png'
@@ -9,13 +8,6 @@ import promoAccessories from '../assets/images/products/promo-smoke-accessories.
 // so it renders with no text overlay. The rest reuse the provided product photography
 // with matching overlay copy to keep the slider consistent.
 export const heroSlides = [
-  {
-    id: 1,
-    img: slide1,
-    baked: true,
-    alt: 'The New Proxy — A Pro Experience',
-    showBluetoothBadge: true,
-  },
   {
     id: 2,
     img: slide2,
