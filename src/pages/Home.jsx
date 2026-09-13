@@ -2,6 +2,7 @@ import Hero from '../components/Hero'
 import CategoryGrid from '../components/CategoryGrid'
 import FeatureProductSection from '../components/FeatureProductSection'
 import VapesSection from '../components/VapesSection'
+import CategoryShowcase from '../components/CategoryShowcase'
 import TrustSection from '../components/TrustSection'
 import BrandsSection from '../components/BrandsSection'
 import AboutSection from '../components/AboutSection'
@@ -26,6 +27,8 @@ export default function Home() {
         <FeatureProductSection title="Shisha Hookah" promoImg={shishaPromo} products={shishaProducts} columns={6} />
       )}
       <VapesSection />
+      <CategoryShowcase title="Vape Juice" categories={['VAPE JUICE']} />
+      <CategoryShowcase title="Vaporizers" categories={['VAPORIZERS']} />
       {torchProducts.length > 0 && (
         <FeatureProductSection title="Torches & Lighter" promoImg={torchPromo} products={torchProducts} />
       )}

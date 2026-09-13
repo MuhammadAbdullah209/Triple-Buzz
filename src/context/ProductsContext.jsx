@@ -22,6 +22,7 @@ export function normalizeProduct(p) {
     name: p.name,
     brand: p.brand || null,
     meta: null,
+    description: p.description || '',
     price: String(p.price),
     image: p.image?.[0]?.url,
     images: p.image?.map((i) => i.url) ?? [],
