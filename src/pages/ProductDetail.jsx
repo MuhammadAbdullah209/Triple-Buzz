@@ -100,8 +100,19 @@ export default function ProductDetail() {
   const { addItem, openCart } = useCart()
   const { toggleItem, isWishlisted } = useWishlist()
   const { isLoggedIn } = useAuth()
-  const { products, findBySlug, loading: productsLoading } = useProducts()
+  const { products, findBySlug, loading: productsLoading, loadingMore, hasMore, loadMore } = useProducts()
   const product = findBySlug(slug)
+
+  // The catalogue loads in batches (see ProductsContext) rather than all at
+  // once, so a product further down the list — reached via a direct link,
+  // a bookmark, or a ProductCard rendered before its batch has loaded — may
+  // not be in memory yet. Keep pulling batches until it turns up or the
+  // backend confirms there's nothing left.
+  useEffect(() => {
+    if (!product && !productsLoading && hasMore && !loadingMore) {
+      loadMore()
+    }
+  }, [product, productsLoading, hasMore, loadingMore])
   const [qty, setQty] = useState(1)
   const [showFullDesc, setShowFullDesc] = useState(false)
   const [activeTab, setActiveTab] = useState('Reviews')
@@ -128,7 +139,7 @@ export default function ProductDetail() {
     }
   }, [product?.backendId])
 
-  if (productsLoading) {
+  if (productsLoading || (!product && hasMore)) {
     return (
       <section className="container-x py-20 text-center">
         <p className="text-sm text-neutral-500">Loading product…</p>

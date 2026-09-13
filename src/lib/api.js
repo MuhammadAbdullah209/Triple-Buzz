@@ -2,7 +2,15 @@
 // the admin portal). CORS on that backend already whitelists this dev origin
 // (http://localhost:5173), so no local proxy is needed the way the TanStack
 // admin portal needs one.
-export const API_BASE = 'https://triple-buzz-store-backend-one.vercel.app'
+//
+// In dev (`npm run dev`) this points at the backend running locally on
+// PORT=5000 (the backend's Backend/.env value) so running both projects
+// locally talks to each other automatically. Override with a VITE_API_BASE
+// env var (e.g. in a .env.local) if your local backend runs on a different
+// port; a production build always uses the deployed backend.
+export const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.DEV ? 'http://localhost:5000' : 'https://triple-buzz-store-backend-one.vercel.app')
 
 // Public by design — Authorize.Net's Accept.js is meant to run with these
 // values exposed in the browser. The actual secret (Transaction Key) never

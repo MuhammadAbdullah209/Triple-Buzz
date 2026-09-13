@@ -8,9 +8,12 @@ import { useAuth } from '../context/AuthContext'
 import { useProducts } from '../context/ProductsContext'
 import { fetchBlogs } from '../lib/api'
 
+// "|" rather than "," — a couple of real category names contain a literal
+// comma (e.g. "TORCHES, LIGHTERS AND BUTANE"), which a comma-joined list
+// couldn't tell apart from a delimiter.
 function categoryHref(name) {
   const mapped = categoryFilterMap[name]
-  const value = mapped ? mapped.join(',') : name
+  const value = mapped ? mapped.join('|') : name
   return `/shop?category=${encodeURIComponent(value)}`
 }
 

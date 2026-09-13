@@ -1,16 +1,24 @@
 import SectionHeader from './SectionHeader'
 import ProductCard from './ProductCard'
 import { useProducts } from '../context/ProductsContext'
+import { categoryFilterMap } from '../data/siteData'
+
+// Matches both the legacy manually-added products ('THC Vapes') and the
+// real Lightspeed category ('THC VAPES') — see the note on categoryFilterMap.
+const THC_VAPE_CATEGORIES = categoryFilterMap['THC Vapes']
 
 export default function VapesSection() {
   const { products } = useProducts()
-  const vapeProducts = products.filter((p) => p.category === 'THC Vapes')
+  const vapeProducts = products.filter((p) => THC_VAPE_CATEGORIES.includes(p.category))
 
   if (vapeProducts.length === 0) return null
 
   return (
     <section className="container-x py-10">
-      <SectionHeader title="THC Vapes" to="/shop?category=THC%20Vapes" />
+      <SectionHeader
+        title="THC Vapes"
+        to={`/shop?category=${encodeURIComponent(THC_VAPE_CATEGORIES.join('|'))}`}
+      />
       <div className="grid grid-cols-2 divide-x divide-y divide-neutral-200 overflow-hidden rounded border border-neutral-200 sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-6">
         {vapeProducts.map((p) => (
           <ProductCard key={p.slug} product={p} flat />

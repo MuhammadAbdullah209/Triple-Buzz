@@ -72,32 +72,65 @@ export const shopCategories = [
 // used in the "Shop" dropdown to the real category (or categories) it should
 // filter to. Labels with no mapping fall through unmapped on purpose, so they
 // honestly show "no products match" instead of silently showing everything.
+// Two generations of category values coexist in the data: the original
+// hand-picked Title-Case names (a couple dozen manually-added products) and
+// the real, all-caps names Lightspeed uses for the much larger synced
+// catalogue (e.g. "THC Vapes" vs "THC VAPES", or "Ashtrays & Trays" vs
+// "ASHTRAYS AND TRAYS" — not just casing, sometimes different wording
+// entirely). Every entry below lists both so a category link surfaces
+// products from either generation instead of silently matching nothing.
 export const categoryFilterMap = {
-  // top-level
-  Vaping: ['THC Vapes'],
-  'Smoking Accessories': ['Smoking Accessories', 'Torches & Lighters', 'Ashtrays & Trays'],
-  Hookah: ['Shisha Hookah'],
-  THC: ['THC Vapes', 'THC Gummies', 'THC Drinks'],
-  Wellness: ['Detox'],
-  Fragrance: ['Perfumes'],
+  // top-level — the union of each subcategory's mapping below
+  Vaping: ['THC Vapes', 'BATTERIES', 'COILS AND PODS', 'DISPOSABLE VAPES', 'VAPE JUICE', 'VAPE MODS', 'VAPORIZERS'],
+  'Smoking Accessories': [
+    'Smoking Accessories', 'Torches & Lighters', 'Ashtrays & Trays',
+    'ASHTRAYS AND TRAYS', 'BANGERS', 'CIGARILLOS', 'GLASS', 'GRINDER',
+    'OIL BURNERS', 'PAPERS AND CONES', 'TORCHES, LIGHTERS AND BUTANE',
+  ],
+  Hookah: ['Shisha Hookah', 'HOOKAH AND ACCESORIES', 'SHISHA AND COAL'],
+  THC: ['THC Vapes', 'THC Gummies', 'THC Drinks', 'THC', 'FLOWER', 'GUMMIES', 'PRE-ROLLS', 'THC DRINKS', 'THC VAPES'],
+  Wellness: ['Detox', 'DETOX', 'HYDROXY AND KRATOM', 'SEX PILLS'],
+  Fragrance: ['Perfumes', 'PERFUMES', 'AIR FRESHENERS, INCENSE AND CANDLES'],
+  'Bags & Scales': ['BAGS', 'POUCHES', 'SCALE'],
+  Novelty: ['DRINKS', 'EXOTIC', 'GENERAL', 'GIFT KIT'],
+  'Whip It': ['WHIP IT'],
+
   // subcategories
-  Batteries: ['THC Vapes'],
-  'Coils and Pods': ['THC Vapes'],
-  'Disposable Vapes': ['THC Vapes'],
-  'Vape Juice': ['THC Vapes'],
-  'Vape Mods': ['THC Vapes'],
-  Vaporizers: ['THC Vapes'],
-  'Ashtrays and Trays': ['Ashtrays & Trays'],
-  Bangers: ['Smoking Accessories'],
-  Grinder: ['Smoking Accessories'],
-  'Torches, Lighters and Butane': ['Torches & Lighters'],
-  'Hookah and Accessories': ['Shisha Hookah'],
-  'Shisha and Coal': ['Shisha Hookah'],
-  Gummies: ['THC Gummies'],
-  'THC Drinks': ['THC Drinks'],
-  'THC Vapes': ['THC Vapes'],
-  Detox: ['Detox'],
-  Perfumes: ['Perfumes'],
+  Batteries: ['THC Vapes', 'BATTERIES'],
+  'Coils and Pods': ['THC Vapes', 'COILS AND PODS'],
+  'Disposable Vapes': ['THC Vapes', 'DISPOSABLE VAPES'],
+  'Vape Juice': ['THC Vapes', 'VAPE JUICE'],
+  'Vape Mods': ['THC Vapes', 'VAPE MODS'],
+  Vaporizers: ['THC Vapes', 'VAPORIZERS'],
+  'Ashtrays and Trays': ['Ashtrays & Trays', 'ASHTRAYS AND TRAYS'],
+  Bangers: ['Smoking Accessories', 'BANGERS'],
+  Cigarillos: ['CIGARILLOS'],
+  Glass: ['GLASS'],
+  Grinder: ['Smoking Accessories', 'GRINDER'],
+  'Oil Burners': ['OIL BURNERS'],
+  'Papers and Cones': ['PAPERS AND CONES'],
+  'Torches, Lighters and Butane': ['Torches & Lighters', 'TORCHES, LIGHTERS AND BUTANE'],
+  'Hookah and Accessories': ['Shisha Hookah', 'HOOKAH AND ACCESORIES'],
+  'Shisha and Coal': ['Shisha Hookah', 'SHISHA AND COAL'],
+  Flower: ['FLOWER'],
+  Gummies: ['THC Gummies', 'GUMMIES'],
+  'Pre-Rolls': ['PRE-ROLLS'],
+  'THC Drinks': ['THC Drinks', 'THC DRINKS'],
+  'THC Vapes': ['THC Vapes', 'THC VAPES'],
+  Detox: ['Detox', 'DETOX'],
+  'Hydroxy and Kratom': ['HYDROXY AND KRATOM'],
+  'Sex Pills': ['SEX PILLS'],
+  'Air Fresheners, Incense and Candles': ['AIR FRESHENERS, INCENSE AND CANDLES'],
+  Perfumes: ['Perfumes', 'PERFUMES'],
+  Bags: ['BAGS'],
+  Pouches: ['POUCHES'],
+  Scale: ['SCALE'],
+  Drinks: ['DRINKS'],
+  Exotic: ['EXOTIC'],
+  General: ['GENERAL'],
+  'Gift Kit': ['GIFT KIT'],
+  // Snacks: no Lightspeed category backs this yet — intentionally left
+  // unmapped, per the note above, rather than guessing a wrong match.
 }
 
 // Real reviews pulled from the shop's live Google Business listing (snapshot

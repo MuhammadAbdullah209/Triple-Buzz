@@ -31,16 +31,28 @@ export function normalizeProduct(p) {
   }
 }
 
+const PAGE_SIZE = 100
+
 export function ProductsProvider({ children }) {
   const [products, setProducts] = useState([])
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(Infinity)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
 
+  // The catalogue (2,000+ items once Lightspeed is synced in) is too big to
+  // load in one shot, so this only ever fetches one backend page up front.
+  // Everything else (Shop's pagination, ProductDetail's slug lookup) pulls
+  // more pages on demand via loadMore() as it needs them.
   useEffect(() => {
     let cancelled = false
-    fetchProducts(1, 'triplebuzz', 100)
+    fetchProducts(1, 'triplebuzz', PAGE_SIZE)
       .then((data) => {
-        if (!cancelled) setProducts((data.products ?? []).map(normalizeProduct))
+        if (cancelled) return
+        setProducts((data.products ?? []).map(normalizeProduct))
+        setPage(1)
+        setTotalCount(typeof data.totalItems === 'number' ? data.totalItems : Infinity)
       })
       .catch((err) => {
         if (!cancelled) setError(err.message || 'Could not load products.')
@@ -52,6 +64,22 @@ export function ProductsProvider({ children }) {
       cancelled = true
     }
   }, [])
+
+  const hasMore = products.length < totalCount
+
+  const loadMore = () => {
+    if (loading || loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const nextPage = page + 1
+    fetchProducts(nextPage, 'triplebuzz', PAGE_SIZE)
+      .then((data) => {
+        setProducts((prev) => [...prev, ...(data.products ?? []).map(normalizeProduct)])
+        setPage(nextPage)
+        if (typeof data.totalItems === 'number') setTotalCount(data.totalItems)
+      })
+      .catch((err) => setError(err.message || 'Could not load more products.'))
+      .finally(() => setLoadingMore(false))
+  }
 
   const categories = useMemo(() => {
     const byName = new Map()
@@ -67,7 +95,11 @@ export function ProductsProvider({ children }) {
   const value = {
     products,
     loading,
+    loadingMore,
     error,
+    hasMore,
+    loadMore,
+    totalCount,
     categories,
     categoryNames: categories.map((c) => c.name),
     findBySlug: (slug) => products.find((p) => p.slug === slug),

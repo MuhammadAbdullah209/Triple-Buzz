@@ -8,11 +8,11 @@ import { useProducts } from '../context/ProductsContext'
 const RATINGS = [5, 4, 3, 2, 1]
 
 export default function Shop() {
-  const { products, categoryNames, loading, error } = useProducts()
+  const { products, categoryNames, loading, loadingMore, hasMore, loadMore, error } = useProducts()
   const [searchParams] = useSearchParams()
   const initialCategory = searchParams.get('category')
   const [selectedCategories, setSelectedCategories] = useState(
-    initialCategory ? initialCategory.split(',').filter(Boolean) : []
+    initialCategory ? initialCategory.split('|').filter(Boolean) : []
   )
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [minPrice, setMinPrice] = useState('')
@@ -21,7 +21,14 @@ export default function Shop() {
   const [perPage, setPerPage] = useState(9)
   const [page, setPage] = useState(1)
 
+  // Shop stays mounted across in-app navigation to /shop (same route, just
+  // different query params), so a category picked earlier wouldn't
+  // otherwise clear when the user lands here again via a plain "/shop" link
+  // — resync the filter from the URL on every navigation, not just the
+  // first one.
   useEffect(() => {
+    const cat = searchParams.get('category')
+    setSelectedCategories(cat ? cat.split('|').filter(Boolean) : [])
     setSearchQuery(searchParams.get('search') || '')
     setPage(1)
   }, [searchParams])
@@ -57,6 +64,17 @@ export default function Shop() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const currentPage = Math.min(page, totalPages)
   const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage)
+
+  // The full catalogue loads in backend-sized batches rather than all at
+  // once (see ProductsContext), so filtering/paging can run out of already-
+  // loaded items well before the real result set is exhausted. Whenever that
+  // happens, pull in the next batch until either there's enough to fill this
+  // page or the backend confirms there's nothing left.
+  useEffect(() => {
+    if (hasMore && !loadingMore && filtered.length < currentPage * perPage) {
+      loadMore()
+    }
+  }, [hasMore, loadingMore, filtered.length, currentPage, perPage])
 
   const relatedProducts = products.slice(0, 6)
 
@@ -195,16 +213,21 @@ export default function Shop() {
               <p className="py-16 text-center text-sm text-neutral-500">Loading products…</p>
             ) : error ? (
               <p className="py-16 text-center text-sm text-red-600">{error}</p>
-            ) : pageItems.length === 0 ? (
+            ) : pageItems.length === 0 && !loadingMore ? (
               <p className="py-16 text-center text-sm text-neutral-500">
                 No products match your filters.
               </p>
+            ) : pageItems.length === 0 ? (
+              <p className="py-16 text-center text-sm text-neutral-500">Loading more products…</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {pageItems.map((p) => (
                   <ProductCard key={p.slug} product={p} />
                 ))}
               </div>
+            )}
+            {loadingMore && pageItems.length > 0 && (
+              <p className="py-4 text-center text-xs text-neutral-400">Loading more products…</p>
             )}
 
             {totalPages > 1 && (
