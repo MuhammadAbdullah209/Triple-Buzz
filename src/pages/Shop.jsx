@@ -4,6 +4,7 @@ import { ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
 import { useProducts } from '../context/ProductsContext'
+import { categoryPageCopy, defaultShopPageCopy, resolveCategoryLabel } from '../data/siteData'
 
 const RATINGS = [5, 4, 3, 2, 1]
 
@@ -78,8 +79,22 @@ export default function Shop() {
 
   const relatedProducts = products.slice(0, 6)
 
+  const activeCategoryLabel = resolveCategoryLabel(selectedCategories)
+  const pageCopy = activeCategoryLabel ? categoryPageCopy[activeCategoryLabel] : defaultShopPageCopy
+
   return (
     <>
+      <section className="container-x pt-10">
+        <div className="ml-10">
+          <h1 className="text-2xl font-bold leading-tight text-ink sm:text-[28px]">
+            {pageCopy.title} <span className="font-normal text-neutral-400">&ndash;</span> {pageCopy.subtitle}
+          </h1>
+          <p className="mt-1.5 text-sm text-neutral-500">
+            {filtered.length} product{filtered.length === 1 ? '' : 's'}
+          </p>
+        </div>
+      </section>
+
       <section className="container-x py-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr]">
           <aside>
@@ -268,6 +283,17 @@ export default function Shop() {
               </div>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="container-x border-t border-neutral-200 py-10">
+        <h2 className="text-xl font-bold text-ink">
+          {pageCopy.title} <span className="font-normal text-neutral-400">&ndash;</span> {pageCopy.subtitle}
+        </h2>
+        <div className="mt-4 flex flex-col gap-4 text-sm leading-relaxed text-neutral-600">
+          {pageCopy.description.map((paragraph, i) => (
+            <p key={i} dangerouslySetInnerHTML={{ __html: paragraph }} />
+          ))}
         </div>
       </section>
 

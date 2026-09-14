@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { FaHeart } from 'react-icons/fa'
-import { siteConfig } from '../data/siteData'
+import { siteConfig, categoryPageCopy, defaultShopPageCopy, resolveCategoryLabel } from '../data/siteData'
 import { StarIcon, CartIcon, ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
@@ -158,6 +158,9 @@ export default function ProductDetail() {
   const wishlisted = isWishlisted(product.backendId)
   const subtotal = (parseFloat(product.price) * qty).toFixed(2)
   const related = products.filter((p) => p.slug !== product.slug).slice(0, 6)
+
+  const productCategoryLabel = resolveCategoryLabel([product.category])
+  const pageCopy = productCategoryLabel ? categoryPageCopy[productCategoryLabel] : defaultShopPageCopy
 
   const reviews = reviewsData?.reviews ?? []
   const summary = reviewsData?.summary ?? { average: 0, total: 0, breakdown: {} }
@@ -569,6 +572,17 @@ export default function ProductDetail() {
               </button>
             </div>
           </aside>
+        </div>
+      </section>
+
+      <section className="container-x border-t border-neutral-200 py-10">
+        <h2 className="text-xl font-bold text-ink">
+          {pageCopy.title} <span className="font-normal text-neutral-400">&ndash;</span> {pageCopy.subtitle}
+        </h2>
+        <div className="mt-4 flex flex-col gap-4 text-sm leading-relaxed text-neutral-600">
+          {pageCopy.description.map((paragraph, i) => (
+            <p key={i} dangerouslySetInnerHTML={{ __html: paragraph }} />
+          ))}
         </div>
       </section>
 

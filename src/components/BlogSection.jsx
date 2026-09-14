@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchBlogs } from '../lib/api'
+import { getHomeBlogPosts } from '../utils/preloadHome'
 
 export default function BlogSection() {
   const [posts, setPosts] = useState([])
 
   useEffect(() => {
     let cancelled = false
-    fetchBlogs(1)
+    // Reuses the fetch preloadHomePage() already kicked off (at app boot, or
+    // on hover of a link to "/"), so this resolves instantly instead of
+    // starting a fresh request once this section finally scrolls into view.
+    getHomeBlogPosts()
       .then((data) => {
         if (!cancelled) setPosts((data.blogs ?? []).slice(0, 3))
       })

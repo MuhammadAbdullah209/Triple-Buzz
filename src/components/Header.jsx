@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useProducts } from '../context/ProductsContext'
 import { fetchBlogs } from '../lib/api'
+import { preloadHomePage } from '../utils/preloadHome'
 
 // "|" rather than "," — a couple of real category names contain a literal
 // comma (e.g. "TORCHES, LIGHTERS AND BUTANE"), which a comma-joined list
@@ -242,12 +243,12 @@ export default function Header() {
           {mobileOpen ? <FiX /> : <FiMenu />}
         </button>
 
-        <Link to="/" className="shrink-0">
+        <Link to="/" className="shrink-0" onMouseEnter={preloadHomePage}>
           <Logo className="h-9 sm:h-10 lg:h-12" />
         </Link>
 
         <nav className="hidden flex-1 flex-wrap items-center justify-center gap-x-3.5 gap-y-1 text-[11px] font-bold uppercase tracking-wide text-ink lg:flex">
-          <Link to="/" className="py-2 transition-colors hover:text-brand-goldDark">
+          <Link to="/" className="py-2 transition-colors hover:text-brand-goldDark" onMouseEnter={preloadHomePage}>
             Home
           </Link>
 
