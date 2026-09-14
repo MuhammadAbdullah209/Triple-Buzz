@@ -29,6 +29,9 @@ export function normalizeProduct(p) {
     category: p.category,
     soldOut: (p.stock ?? 0) <= 0,
     stock: p.stock,
+    sold: p.sold,
+    reviewCount: p.reviewCount,
+    rating: p.rating,
   }
 }
 

@@ -10,6 +10,13 @@ import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import { useProducts } from '../context/ProductsContext'
 import { fetchProductReviews, writeReviewRequest, ApiError } from '../lib/api'
+import {
+  getDisplaySold,
+  getDisplayRating,
+  getDisplayReviewCount,
+  getDisplayBreakdown,
+  getFakeReviews,
+} from '../utils/socialProof'
 
 const PRODUCT_FAQS = [
   {
@@ -155,6 +162,15 @@ export default function ProductDetail() {
   const reviews = reviewsData?.reviews ?? []
   const summary = reviewsData?.summary ?? { average: 0, total: 0, breakdown: {} }
 
+  const hasRealReviews = summary.total > 0
+  const displayRating = hasRealReviews ? summary.average : getDisplayRating(product)
+  const displayReviewTotal = hasRealReviews ? summary.total : getDisplayReviewCount(product)
+  const displayBreakdown = hasRealReviews
+    ? summary.breakdown
+    : getDisplayBreakdown(product, displayReviewTotal)
+  const displaySold = getDisplaySold(product)
+  const fakeReviews = hasRealReviews ? [] : getFakeReviews(product, Math.min(5, displayReviewTotal))
+
   const submitReview = async (e) => {
     e.preventDefault()
     if (!reviewRating || !product.backendId) return
@@ -229,17 +245,17 @@ export default function ProductDetail() {
                     <div className="flex items-center gap-3">
                       <StarIcon className="h-8 w-8 text-brand-gold" />
                       <div>
-                        <p className="text-3xl font-extrabold text-ink">{summary.average.toFixed(1)}/5.0</p>
+                        <p className="text-3xl font-extrabold text-ink">{displayRating.toFixed(1)}/5.0</p>
                         <p className="text-xs text-neutral-500">
-                          {summary.total} rating{summary.total === 1 ? '' : 's'} &bull; {summary.total} review
-                          {summary.total === 1 ? '' : 's'}
+                          {displayReviewTotal} rating{displayReviewTotal === 1 ? '' : 's'} &bull; {displayReviewTotal} review
+                          {displayReviewTotal === 1 ? '' : 's'}
                         </p>
                       </div>
                     </div>
                     <div className="mt-5 flex flex-col gap-2">
                       {[5, 4, 3, 2, 1].map((star) => {
-                        const count = summary.breakdown?.[star] ?? 0
-                        const pct = summary.total ? Math.round((count / summary.total) * 100) : 0
+                        const count = displayBreakdown?.[star] ?? 0
+                        const pct = displayReviewTotal ? Math.round((count / displayReviewTotal) * 100) : 0
                         return (
                           <div key={star} className="flex items-center gap-2 text-xs text-neutral-600">
                             <span className="flex w-8 items-center gap-0.5">
@@ -315,6 +331,31 @@ export default function ProductDetail() {
                     )}
 
                     <div className="flex flex-col gap-6">
+                      {reviews.length === 0 &&
+                        fakeReviews.map((r) => (
+                          <div key={r._id} className="border-b border-neutral-200 pb-6">
+                            <div className="flex items-center gap-3">
+                              <span className="grid h-9 w-9 place-items-center rounded-full bg-ink text-xs font-bold text-white">
+                                {r.name[0]}
+                              </span>
+                              <div>
+                                <p className="text-sm font-bold text-ink">{r.name}</p>
+                                <p className="text-xs text-neutral-400">{r.time}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <StarIcon
+                                  key={i}
+                                  className={`h-3.5 w-3.5 ${
+                                    i < r.rating ? 'text-brand-gold' : 'text-black/10'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <p className="mt-2 text-sm leading-relaxed text-neutral-600">{r.comment}</p>
+                          </div>
+                        ))}
                       {reviews.map((r) => {
                         const name =
                           [r.user?.firstname, r.user?.lastname].filter(Boolean).join(' ') || 'A customer'
@@ -355,7 +396,7 @@ export default function ProductDetail() {
                           </div>
                         )
                       })}
-                      {reviews.length === 0 && (
+                      {reviews.length === 0 && fakeReviews.length === 0 && (
                         <p className="text-sm text-neutral-500">
                           No reviews yet — be the first to share your thoughts.
                         </p>
@@ -412,11 +453,11 @@ export default function ProductDetail() {
 
             <div className="mt-2 flex items-center gap-1.5 text-sm text-neutral-600">
               <StarIcon className="h-4 w-4 text-brand-gold" />
-              <span className="font-semibold text-ink">{summary.average.toFixed(1)}/5.0</span>
+              <span className="font-semibold text-ink">{displayRating.toFixed(1)}/5.0</span>
               <span className="text-neutral-300">|</span>
-              <span>{summary.total} Reviews</span>
+              <span>{displayReviewTotal} Reviews</span>
               <span className="text-neutral-300">|</span>
-              <span>300 sold</span>
+              <span>{displaySold} sold</span>
             </div>
 
             {!product.soldOut && (

@@ -3,6 +3,8 @@ import { FiHeart } from 'react-icons/fi'
 import { FaHeart } from 'react-icons/fa'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
+import { StarIcon } from './Icons'
+import { getDisplaySold, getDisplayRating } from '../utils/socialProof'
 
 export default function ProductCard({ product, flat = false }) {
   const { addItem, openCart } = useCart()
@@ -53,6 +55,12 @@ export default function ProductCard({ product, flat = false }) {
         </Link>
         {product.meta && <p className={`text-ink ${flat ? 'text-xs' : 'text-sm'}`}>{product.meta}</p>}
         <p className={`mt-1 font-semibold text-ink ${flat ? 'text-sm' : 'text-base'}`}>${product.price}</p>
+        <p className={`flex items-center gap-1.5 text-neutral-500 ${flat ? 'text-[10px]' : 'text-[11px]'}`}>
+          <StarIcon className="h-3 w-3 text-brand-gold" />
+          <span className="font-semibold text-ink">{getDisplayRating(product).toFixed(1)}/5.0</span>
+          <span>|</span>
+          <span>{getDisplaySold(product)} sold</span>
+        </p>
       </div>
       <button
         type="button"
