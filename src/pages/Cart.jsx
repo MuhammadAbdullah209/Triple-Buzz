@@ -11,6 +11,7 @@ import AreasServed from '../components/AreasServed'
 import CardPaymentForm from '../components/CardPaymentForm'
 import PayPalCheckoutButton from '../components/PayPalCheckoutButton'
 import ShippingAddressModal from '../components/ShippingAddressModal'
+import PaymentIcons from '../components/PaymentIcons'
 
 const COUPONS = {
   WELCOME10: 0.1,
@@ -823,6 +824,9 @@ export default function Cart() {
                       : 'Choose a payment provider above to continue.'
                   : 'No charge today — you pay in store when you pick up.'}
               </p>
+              <div className="mt-4">
+                <PaymentIcons />
+              </div>
             </div>
           </aside>
         </div>

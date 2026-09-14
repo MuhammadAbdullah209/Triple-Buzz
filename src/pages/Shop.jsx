@@ -21,6 +21,11 @@ export default function Shop() {
   const [sortBy, setSortBy] = useState('latest')
   const [perPage, setPerPage] = useState(9)
   const [page, setPage] = useState(1)
+  const [openFilters, setOpenFilters] = useState({ category: true, rating: true, price: true })
+
+  const toggleFilterSection = (key) => {
+    setOpenFilters((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   // Shop stays mounted across in-app navigation to /shop (same route, just
   // different query params), so a category picked earlier wouldn't
@@ -99,82 +104,113 @@ export default function Shop() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr]">
           <aside>
             <div className="border-b border-neutral-200 pb-6">
-              <p className="mb-3 flex items-center justify-between text-sm font-bold text-ink">
+              <button
+                type="button"
+                onClick={() => toggleFilterSection('category')}
+                aria-expanded={openFilters.category}
+                className="mb-3 flex w-full items-center justify-between text-sm font-bold text-ink"
+              >
                 Category
-                <ChevronDownIcon className="h-4 w-4" />
-              </p>
-              <label className="flex items-center gap-2 py-1 text-sm text-neutral-600">
-                <input
-                  type="checkbox"
-                  checked={selectedCategories.length === 0}
-                  onChange={() => setSelectedCategories([])}
-                  className="h-4 w-4 accent-brand-gold"
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform ${openFilters.category ? 'rotate-180' : ''}`}
                 />
-                All
-              </label>
-              {categoryNames.map((cat) => (
-                <label key={cat} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(cat)}
-                    onChange={() => toggleCategory(cat)}
-                    className="h-4 w-4 accent-brand-gold"
-                  />
-                  {cat}
-                </label>
-              ))}
+              </button>
+              {openFilters.category && (
+                <>
+                  <label className="flex items-center gap-2 py-1 text-sm text-neutral-600">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.length === 0}
+                      onChange={() => setSelectedCategories([])}
+                      className="h-4 w-4 accent-brand-gold"
+                    />
+                    All
+                  </label>
+                  {categoryNames.map((cat) => (
+                    <label key={cat} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.includes(cat)}
+                        onChange={() => toggleCategory(cat)}
+                        className="h-4 w-4 accent-brand-gold"
+                      />
+                      {cat}
+                    </label>
+                  ))}
+                </>
+              )}
             </div>
 
             <div className="border-b border-neutral-200 py-6">
-              <p className="mb-3 flex items-center justify-between text-sm font-bold text-ink">
+              <button
+                type="button"
+                onClick={() => toggleFilterSection('rating')}
+                aria-expanded={openFilters.rating}
+                className="mb-3 flex w-full items-center justify-between text-sm font-bold text-ink"
+              >
                 Rating
-                <ChevronDownIcon className="h-4 w-4" />
-              </p>
-              <label className="flex items-center gap-2 py-1 text-sm text-neutral-600">
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-brand-gold" />
-                All
-              </label>
-              {RATINGS.map((r) => (
-                <label key={r} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
-                  <input type="checkbox" className="h-4 w-4 accent-brand-gold" />
-                  {r} {r === 1 ? 'Star' : 'Stars'}
-                </label>
-              ))}
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform ${openFilters.rating ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {openFilters.rating && (
+                <>
+                  <label className="flex items-center gap-2 py-1 text-sm text-neutral-600">
+                    <input type="checkbox" defaultChecked className="h-4 w-4 accent-brand-gold" />
+                    All
+                  </label>
+                  {RATINGS.map((r) => (
+                    <label key={r} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
+                      <input type="checkbox" className="h-4 w-4 accent-brand-gold" />
+                      {r} {r === 1 ? 'Star' : 'Stars'}
+                    </label>
+                  ))}
+                </>
+              )}
             </div>
 
             <div className="py-6">
-              <p className="mb-3 flex items-center justify-between text-sm font-bold text-ink">
+              <button
+                type="button"
+                onClick={() => toggleFilterSection('price')}
+                aria-expanded={openFilters.price}
+                className="mb-3 flex w-full items-center justify-between text-sm font-bold text-ink"
+              >
                 Price
-                <ChevronDownIcon className="h-4 w-4" />
-              </p>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2">
-                  <span className="text-sm text-neutral-600">$</span>
-                  <input
-                    type="number"
-                    placeholder="Min Price"
-                    value={minPrice}
-                    onChange={(e) => {
-                      setMinPrice(e.target.value)
-                      setPage(1)
-                    }}
-                    className="w-full text-sm text-ink outline-none"
-                  />
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform ${openFilters.price ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {openFilters.price && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2">
+                    <span className="text-sm text-neutral-600">$</span>
+                    <input
+                      type="number"
+                      placeholder="Min Price"
+                      value={minPrice}
+                      onChange={(e) => {
+                        setMinPrice(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full text-sm text-ink outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2">
+                    <span className="text-sm text-neutral-600">$</span>
+                    <input
+                      type="number"
+                      placeholder="Max Price"
+                      value={maxPrice}
+                      onChange={(e) => {
+                        setMaxPrice(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full text-sm text-ink outline-none"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2">
-                  <span className="text-sm text-neutral-600">$</span>
-                  <input
-                    type="number"
-                    placeholder="Max Price"
-                    value={maxPrice}
-                    onChange={(e) => {
-                      setMaxPrice(e.target.value)
-                      setPage(1)
-                    }}
-                    className="w-full text-sm text-ink outline-none"
-                  />
-                </div>
-              </div>
+              )}
             </div>
           </aside>
 
