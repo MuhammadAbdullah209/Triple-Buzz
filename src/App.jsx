@@ -6,6 +6,7 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import AgeVerificationModal from './components/AgeVerificationModal'
 import CartDrawer from './components/CartDrawer'
+import RecentPurchasePopup from './components/RecentPurchasePopup'
 import Home from './pages/Home'
 import About from './pages/About'
 import ContactUs from './pages/ContactUs'
@@ -39,6 +40,7 @@ export default function App() {
     <div className="min-h-screen bg-white">
       <AgeVerificationModal />
       <CartDrawer />
+      <RecentPurchasePopup />
       <ScrollToTop />
       <AnnouncementBar />
       <Header />
