@@ -5,11 +5,12 @@ import { siteConfig, categoryPageCopy, defaultShopPageCopy, resolveCategoryLabel
 import { StarIcon, CartIcon, ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
+import ShareModal from '../components/ShareModal'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
-import { useProducts } from '../context/ProductsContext'
-import { fetchProductReviews, writeReviewRequest, ApiError } from '../lib/api'
+import { useProducts, normalizeProduct } from '../context/ProductsContext'
+import { fetchProductReviews, writeReviewRequest, fetchProducts, ApiError } from '../lib/api'
 import {
   getDisplaySold,
   getDisplayRating,
@@ -97,24 +98,60 @@ export default function ProductDetail() {
   const { addItem, openCart } = useCart()
   const { toggleItem, isWishlisted } = useWishlist()
   const { isLoggedIn } = useAuth()
-  const { products, findBySlug, loading: productsLoading, loadingMore, hasMore, loadMore } = useProducts()
-  const product = findBySlug(slug)
+  const { products, findBySlug, loading: productsLoading } = useProducts()
+  const localProduct = findBySlug(slug)
+  const [remoteProduct, setRemoteProduct] = useState(null)
+  const [searchExhausted, setSearchExhausted] = useState(false)
+  const product = localProduct || remoteProduct
 
-  // The catalogue loads in batches (see ProductsContext) rather than all at
-  // once, so a product further down the list — reached via a direct link,
-  // a bookmark, or a ProductCard rendered before its batch has loaded — may
-  // not be in memory yet. Keep pulling batches until it turns up or the
-  // backend confirms there's nothing left.
+  // The catalogue loads in 100-item batches (see ProductsContext) rather than
+  // all at once (2,000+ products), so a product further down the list —
+  // reached via a direct link, a bookmark, or a click from the cart drawer —
+  // is often not in memory yet. Paging through every batch sequentially to
+  // find it could mean dozens of awaited round-trips before it turns up, so
+  // instead this does a couple of targeted name searches (the backend's
+  // `search` param) using the slug's own words, which resolves it in one or
+  // two requests instead. Falls back to "not found" once those are exhausted
+  // rather than hanging indefinitely.
   useEffect(() => {
-    if (!product && !productsLoading && hasMore && !loadingMore) {
-      loadMore()
+    setRemoteProduct(null)
+    setSearchExhausted(false)
+  }, [slug])
+
+  useEffect(() => {
+    if (localProduct || remoteProduct || searchExhausted || productsLoading) return
+
+    let cancelled = false
+    const words = slug.split('-').filter((w) => w.length > 2)
+    const searchTerms = [...words].sort((a, b) => b.length - a.length).slice(0, 3)
+
+    ;(async () => {
+      for (const term of searchTerms.length ? searchTerms : [slug]) {
+        try {
+          const data = await fetchProducts(1, 'triplebuzz', 100, term)
+          const match = (data.products || []).map(normalizeProduct).find((p) => p.slug === slug)
+          if (match) {
+            if (!cancelled) setRemoteProduct(match)
+            return
+          }
+        } catch {
+          // Network hiccup on this term — try the next one.
+        }
+      }
+      if (!cancelled) setSearchExhausted(true)
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }, [product, productsLoading, hasMore, loadingMore])
+  }, [slug, localProduct, remoteProduct, searchExhausted, productsLoading])
+
   const [qty, setQty] = useState(1)
   const [showFullDesc, setShowFullDesc] = useState(false)
   const [activeTab, setActiveTab] = useState('Reviews')
   const [openFaq, setOpenFaq] = useState(2)
   const [added, setAdded] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewText, setReviewText] = useState('')
@@ -136,7 +173,7 @@ export default function ProductDetail() {
     }
   }, [product?.backendId])
 
-  if (productsLoading || (!product && hasMore)) {
+  if (productsLoading || (!product && !searchExhausted)) {
     return (
       <section className="container-x py-20 text-center">
         <p className="text-sm text-neutral-500">Loading product…</p>
@@ -567,13 +604,24 @@ export default function ProductDetail() {
                 {wishlisted ? 'Wishlisted' : 'Wishlist'}
               </button>
               <span className="h-4 w-px bg-neutral-200" />
-              <button type="button" className="flex items-center gap-1.5 hover:text-ink">
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className="flex items-center gap-1.5 hover:text-ink"
+              >
                 <ShareIcon /> Share
               </button>
             </div>
           </aside>
         </div>
       </section>
+
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        url={typeof window !== 'undefined' ? window.location.href : ''}
+        title={product?.name}
+      />
 
       <section className="container-x border-t border-neutral-200 py-10">
         <h2 className="text-xl font-bold text-ink">

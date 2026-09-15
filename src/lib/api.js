@@ -159,8 +159,9 @@ export function removeAvatar() {
 
 /* ---------- Products ---------- */
 
-export function fetchProducts(page = 1, site = 'triplebuzz', limit = 100) {
-  return api(`/Product/allproducts?page=${page}&limit=${limit}${site ? `&site=${site}` : ''}`)
+export function fetchProducts(page = 1, site = 'triplebuzz', limit = 100, search) {
+  const params = `page=${page}&limit=${limit}${site ? `&site=${site}` : ''}`
+  return api(`/Product/allproducts?${params}${search ? `&search=${encodeURIComponent(search)}` : ''}`)
 }
 
 export function fetchProductById(id) {
