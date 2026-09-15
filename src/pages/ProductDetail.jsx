@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { FaHeart } from 'react-icons/fa'
-import { siteConfig, categoryPageCopy, defaultShopPageCopy, resolveCategoryLabel } from '../data/siteData'
+import {
+  siteConfig,
+  categoryPageCopy,
+  defaultShopPageCopy,
+  resolveCategoryLabel,
+  findLeafLabelForCategory,
+  categorySlugs,
+} from '../data/siteData'
 import { StarIcon, CartIcon, ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
@@ -93,7 +100,7 @@ function StarPicker({ value, onChange }) {
 const TABS = ['Reviews', 'Description', 'FAQs']
 
 export default function ProductDetail() {
-  const { slug } = useParams()
+  const { slug, collectionSlug: urlCollectionSlug } = useParams()
   const navigate = useNavigate()
   const { addItem, openCart } = useCart()
   const { toggleItem, isWishlisted } = useWishlist()
@@ -199,6 +206,15 @@ export default function ProductDetail() {
   const productCategoryLabel = resolveCategoryLabel([product.category])
   const pageCopy = productCategoryLabel ? categoryPageCopy[productCategoryLabel] : defaultShopPageCopy
 
+  // Breadcrumb's middle crumb: the most specific collection this product
+  // actually belongs to (e.g. "Batteries", not the broader "Vaping" umbrella)
+  // — prefers whatever collection slug is already in the URL (arrived via
+  // /collections/:slug/products/:slug), falling back to resolving one from
+  // the product's own raw category when reached via the bare /shop/:slug URL.
+  const productLeafLabel = findLeafLabelForCategory(product.category)
+  const breadcrumbCollectionSlug = urlCollectionSlug || (productLeafLabel ? categorySlugs[productLeafLabel] : null)
+  const breadcrumbLabel = productLeafLabel || product.category
+
   const reviews = reviewsData?.reviews ?? []
   const summary = reviewsData?.summary ?? { average: 0, total: 0, breakdown: {} }
 
@@ -232,7 +248,12 @@ export default function ProductDetail() {
         <nav className="flex items-center gap-2 text-xs text-neutral-500">
           <Link to="/" className="hover:text-ink">Home</Link>
           <span>&rsaquo;</span>
-          <Link to="/shop" className="hover:text-ink">{product.category}</Link>
+          <Link
+            to={breadcrumbCollectionSlug ? `/collections/${breadcrumbCollectionSlug}` : '/shop'}
+            className="hover:text-ink"
+          >
+            {breadcrumbLabel}
+          </Link>
           <span>&rsaquo;</span>
           <span className="font-semibold text-ink">{product.name.toUpperCase()}</span>
         </nav>

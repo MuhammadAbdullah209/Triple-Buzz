@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
@@ -11,6 +11,8 @@ import {
   resolveCategoryLabel,
   categoryFilterMap,
   shopLeafCategories,
+  slugToCategoryLabel,
+  categorySlugs,
 } from '../data/siteData'
 
 // Any single real category currently tops out at a few hundred items (the
@@ -34,11 +36,24 @@ function deriveSelectedLabels(rawValues) {
   )
 }
 
+// Two URL shapes can land here: the clean "/collections/:slug" a header
+// link now generates (matches the live triplebuzzsmokeshop.com Shopify
+// site), or the internal "/shop?category=A%7CB" form (multi-value, used by
+// checkbox selections and a couple of Home-page components). The slug always
+// wins when both are somehow present.
+function resolveRawCategoriesFromUrl(collectionSlug, categoryParam) {
+  if (collectionSlug) {
+    const label = slugToCategoryLabel[collectionSlug]
+    return label ? categoryFilterMap[label] || [label] : []
+  }
+  return categoryParam ? categoryParam.split('|').filter(Boolean) : []
+}
+
 export default function Shop() {
   const { products, loading, loadingMore, hasMore, loadMore, error } = useProducts()
-  const [searchParams] = useSearchParams()
-  const initialCategory = searchParams.get('category')
-  const initialRawCategories = initialCategory ? initialCategory.split('|').filter(Boolean) : []
+  const { slug: collectionSlug } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialRawCategories = resolveRawCategoriesFromUrl(collectionSlug, searchParams.get('category'))
   // selectedCategories (raw backend values) is the source of truth for
   // fetching and the URL. selectedLabels (friendly checkbox labels) is
   // derived from it for display, but tracked separately so toggling one
@@ -51,7 +66,22 @@ export default function Shop() {
   const [maxPrice, setMaxPrice] = useState('')
   const [sortBy, setSortBy] = useState('latest')
   const [perPage, setPerPage] = useState(9)
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1)
+
+  // Keep ?page=N in the URL in sync with the page state so the address bar
+  // matches triplebuzzsmokeshop.com/collections/shisha-and-coal?page=2.
+  // Using replace:true so paging doesn't flood the browser history stack.
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (page <= 1) next.delete('page')
+        else next.set('page', String(page))
+        return next
+      },
+      { replace: true }
+    )
+  }, [page])
   const [openFilters, setOpenFilters] = useState(() => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024
     return { category: !isMobile, rating: !isMobile, price: !isMobile }
@@ -67,13 +97,12 @@ export default function Shop() {
   // — resync the filter from the URL on every navigation, not just the
   // first one.
   useEffect(() => {
-    const cat = searchParams.get('category')
-    const raw = cat ? cat.split('|').filter(Boolean) : []
+    const raw = resolveRawCategoriesFromUrl(collectionSlug, searchParams.get('category'))
     setSelectedCategories(raw)
     setSelectedLabels(deriveSelectedLabels(raw))
     setSearchQuery(searchParams.get('search') || '')
-    setPage(1)
-  }, [searchParams])
+    setPage(Number(searchParams.get('page')) || 1)
+  }, [collectionSlug, searchParams])
 
   // Checkboxes show friendly leaf labels ("Batteries"), same as the header —
   // each one resolves to one or more raw backend category values via
@@ -203,6 +232,13 @@ export default function Shop() {
 
   const activeCategoryLabel = resolveCategoryLabel(selectedCategories)
   const pageCopy = activeCategoryLabel ? categoryPageCopy[activeCategoryLabel] : defaultShopPageCopy
+
+  // The collection slug each product card links through — whatever's
+  // actually in the URL when it's a clean "/collections/:slug" visit,
+  // otherwise derived from a single checked checkbox. Left undefined for
+  // "All"/multi-category views, where no one collection applies to every
+  // card, so ProductCard falls back to its bare "/shop/:slug" link.
+  const productCollectionSlug = collectionSlug || (selectedLabels.length === 1 ? categorySlugs[selectedLabels[0]] : undefined)
 
   return (
     <>
@@ -395,7 +431,7 @@ export default function Shop() {
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {pageItems.map((p) => (
-                  <ProductCard key={p.slug} product={p} />
+                  <ProductCard key={p.slug} product={p} collectionSlug={productCollectionSlug} />
                 ))}
               </div>
             )}

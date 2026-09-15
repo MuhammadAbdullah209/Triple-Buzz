@@ -6,15 +6,22 @@ import { useWishlist } from '../context/WishlistContext'
 import { StarIcon } from './Icons'
 import { getDisplaySold, getDisplayRating } from '../utils/socialProof'
 
-export default function ProductCard({ product, flat = false }) {
+// collectionSlug is passed by any grid that represents one specific
+// collection (Shop.jsx filtered to a single category, or a Home-page strip
+// like VapesSection/CategoryShowcase) — matches the real site's
+// "/collections/:slug/products/:slug" URLs instead of the bare
+// "/shop/:slug" used everywhere a product isn't shown in a collection
+// context (cart, wishlist, related products, general browsing).
+export default function ProductCard({ product, flat = false, collectionSlug }) {
   const { addItem, openCart } = useCart()
   const { toggleItem, isWishlisted } = useWishlist()
   const wishlisted = isWishlisted(product.backendId)
+  const productHref = collectionSlug ? `/collections/${collectionSlug}/products/${product.slug}` : `/shop/${product.slug}`
 
   return (
     <div className={`group flex flex-col bg-white ${flat ? '' : 'overflow-hidden rounded-md border border-neutral-200 card-shadow'}`}>
       <div className="relative">
-        <Link to={`/shop/${product.slug}`} className="block aspect-square overflow-hidden bg-neutral-100 p-4">
+        <Link to={productHref} className="block aspect-square overflow-hidden bg-neutral-100 p-4">
           <img
             src={product.image}
             alt={product.name}
@@ -46,7 +53,7 @@ export default function ProductCard({ product, flat = false }) {
           </p>
         )}
         <Link
-          to={`/shop/${product.slug}`}
+          to={productHref}
           className={`line-clamp-2 font-semibold leading-tight text-ink hover:text-brand-goldDark ${
             flat ? 'min-h-[2rem] text-xs' : 'min-h-[2.5rem] text-sm'
           }`}

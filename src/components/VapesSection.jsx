@@ -1,7 +1,7 @@
 import SectionHeader from './SectionHeader'
 import ProductCard from './ProductCard'
 import { useProducts } from '../context/ProductsContext'
-import { categoryFilterMap } from '../data/siteData'
+import { categoryFilterMap, categorySlugs } from '../data/siteData'
 
 // Matches both the legacy manually-added products ('THC Vapes') and the
 // real Lightspeed category ('THC VAPES') — see the note on categoryFilterMap.
@@ -15,13 +15,10 @@ export default function VapesSection() {
 
   return (
     <section className="container-x py-10">
-      <SectionHeader
-        title="THC Vapes"
-        to={`/shop?category=${encodeURIComponent(THC_VAPE_CATEGORIES.join('|'))}`}
-      />
+      <SectionHeader title="THC Vapes" to={`/collections/${categorySlugs['THC Vapes']}`} />
       <div className="grid grid-cols-2 divide-x divide-y divide-neutral-200 overflow-hidden rounded border border-neutral-200 sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-6">
         {vapeProducts.map((p) => (
-          <ProductCard key={p.slug} product={p} flat />
+          <ProductCard key={p.slug} product={p} flat collectionSlug={categorySlugs['THC Vapes']} />
         ))}
       </div>
     </section>

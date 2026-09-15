@@ -2,20 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FiSearch, FiUser, FiShoppingCart, FiMenu, FiX, FiChevronDown, FiLogOut } from 'react-icons/fi'
 import Logo from './Logo'
-import { shopCategories, categoryFilterMap } from '../data/siteData'
+import { shopCategories, categorySlugs } from '../data/siteData'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useProducts } from '../context/ProductsContext'
 import { fetchBlogs } from '../lib/api'
 import { preloadHomePage } from '../utils/preloadHome'
 
-// "|" rather than "," — a couple of real category names contain a literal
-// comma (e.g. "TORCHES, LIGHTERS AND BUTANE"), which a comma-joined list
-// couldn't tell apart from a delimiter.
+// Clean "/collections/:slug" URLs — matches the live triplebuzzsmokeshop.com
+// Shopify site (e.g. /collections/batteries) instead of exposing our
+// internal raw category values in a "?category=A%7CB%7CC" query string.
+// Every label in shopCategories always has a slug (see siteData.js).
 function categoryHref(name) {
-  const mapped = categoryFilterMap[name]
-  const value = mapped ? mapped.join('|') : name
-  return `/shop?category=${encodeURIComponent(value)}`
+  return `/collections/${categorySlugs[name]}`
 }
 
 function SearchModal({ open, onClose }) {
@@ -157,7 +156,7 @@ function SearchModal({ open, onClose }) {
                     {postMatches.map((post) => (
                       <Link
                         key={post._id}
-                        to={`/blog/${post._id}`}
+                        to={`/blog/${post.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
                         onClick={onClose}
                         className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-black/5"
                       >

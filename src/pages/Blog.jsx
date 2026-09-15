@@ -10,6 +10,14 @@ function formatDate(value) {
     : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function slugifyTitle(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
 export default function Blog() {
   const [allPosts, setAllPosts] = useState(null)
   const [error, setError] = useState('')
@@ -87,7 +95,7 @@ export default function Blog() {
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {posts?.map((post) => (
             <article key={post._id}>
-              <Link to={`/blog/${post._id}`} className="relative block overflow-hidden rounded">
+              <Link to={`/blog/${slugifyTitle(post.title)}`} className="relative block overflow-hidden rounded">
                 {post.image?.url && (
                   <img
                     src={post.image.url}
@@ -103,12 +111,12 @@ export default function Blog() {
               </Link>
               <p className="mt-3 text-xs text-neutral-400">{formatDate(post.createdAt)}</p>
               <h2 className="mt-1 mb-4 text-base font-semibold leading-snug text-ink">
-                <Link to={`/blog/${post._id}`} className="hover:text-brand-goldDark">
+                <Link to={`/blog/${slugifyTitle(post.title)}`} className="hover:text-brand-goldDark">
                   {post.title}
                 </Link>
               </h2>
               <Link
-                to={`/blog/${post._id}`}
+                to={`/blog/${slugifyTitle(post.title)}`}
                 className="inline-flex items-center rounded border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-500 transition-colors hover:border-ink hover:text-ink"
               >
                 Read Full Blog

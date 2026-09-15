@@ -61,8 +61,17 @@ export default function App() {
         <Route path="/pflugerville" element={<Pflugerville />} />
         <Route path="/san-marcos" element={<SanMarcos />} />
         <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:id" element={<BlogPost />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/shop" element={<Shop />} />
+        {/* Matches the live triplebuzzsmokeshop.com Shopify site's clean
+            collection URLs (e.g. /collections/batteries) — see siteData.js's
+            categorySlugs/slugToCategoryLabel and Shop.jsx's resolution logic. */}
+        <Route path="/collections/:slug" element={<Shop />} />
+        {/* Same product page as /shop/:slug, reached with its collection
+            context in the URL (e.g. /collections/batteries/products/x) —
+            the param is still named "slug" so ProductDetail needs no changes
+            to read it. */}
+        <Route path="/collections/:collectionSlug/products/:slug" element={<ProductDetail />} />
         <Route path="/shop/:slug" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/profile" element={<Profile />} />

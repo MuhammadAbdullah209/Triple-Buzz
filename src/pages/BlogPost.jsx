@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { fetchBlogById, ApiError } from '../lib/api'
+import { fetchBlogs, fetchBlogById, ApiError } from '../lib/api'
 import AreasServed from '../components/AreasServed'
 
 function formatDate(value) {
@@ -11,8 +11,16 @@ function formatDate(value) {
     : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
+function slugifyTitle(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
 export default function BlogPost() {
-  const { id } = useParams()
+  const { slug } = useParams()
   const [post, setPost] = useState(null)
   const [error, setError] = useState('')
 
@@ -20,17 +28,34 @@ export default function BlogPost() {
     let cancelled = false
     setPost(null)
     setError('')
-    fetchBlogById(id)
+
+    // The URL carries a title-based slug (e.g. "my-blog-post"), not a MongoDB
+    // _id. Fetch the blog listing first, find the post whose title matches the
+    // slug, then fetch its full content by _id (the only identifier the
+    // backend's detail endpoint accepts).
+    fetchBlogs(1)
       .then((data) => {
-        if (!cancelled) setPost(data.blog)
+        if (cancelled) return
+        const match = (data.blogs ?? []).find(
+          (b) => slugifyTitle(b.title) === slug
+        )
+        if (!match) {
+          setError('Post not found.')
+          return
+        }
+        return fetchBlogById(match._id)
+      })
+      .then((data) => {
+        if (!cancelled && data) setPost(data.blog)
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'Could not load this post.')
       })
+
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [slug])
 
   if (error) {
     return (

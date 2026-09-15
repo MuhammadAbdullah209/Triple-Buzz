@@ -67,6 +67,34 @@ export const shopCategories = [
   },
 ]
 
+function slugifyCategoryLabel(label) {
+  return label
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+// Every label that can appear as a category selection (each top-level group
+// and each of its subcategories) gets a clean "/collections/:slug" URL —
+// matching the live triplebuzzsmokeshop.com Shopify site's collection URLs
+// (e.g. /collections/batteries) — instead of exposing our internal raw
+// category values in a "?category=A%7CB%7CC" query string. See Shop.jsx
+// (resolves a slug back to raw category values) and Header.jsx (builds the
+// links).
+const allCategoryLabels = [
+  ...shopCategories.map((cat) => cat.label),
+  ...shopCategories.flatMap((cat) => cat.subcategories),
+]
+
+export const categorySlugs = Object.fromEntries(
+  allCategoryLabels.map((label) => [label, slugifyCategoryLabel(label)])
+)
+
+export const slugToCategoryLabel = Object.fromEntries(
+  allCategoryLabels.map((label) => [slugifyCategoryLabel(label), label])
+)
+
 // Every leaf category a user can pick — each subcategory, plus any top-level
 // entry with none of its own (e.g. "Whip It"). Used for the Shop page's
 // category checkboxes so that list mirrors the header's mega menu exactly,
@@ -279,6 +307,24 @@ export function resolveCategoryLabel(selected) {
     }
   }
   return bestLabel
+}
+
+// Given a single product's raw backend category, finds the most specific
+// matching leaf label — the one whose raw-value list is shortest, since a
+// longer list is more likely to be a shared legacy fallback (e.g. several
+// Vaping subcategories all list "THC Vapes" too). Used for a product page's
+// breadcrumb link back to the collection it actually belongs to.
+export function findLeafLabelForCategory(rawCategory) {
+  let best
+  let bestSize = Infinity
+  for (const label of shopLeafCategories) {
+    const values = categoryFilterMap[label] || [label]
+    if (values.includes(rawCategory) && values.length < bestSize) {
+      best = label
+      bestSize = values.length
+    }
+  }
+  return best
 }
 
 // Real reviews pulled from the shop's live Google Business listing (snapshot
