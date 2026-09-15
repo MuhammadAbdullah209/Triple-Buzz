@@ -34,11 +34,13 @@ export const heroSlides = [
     img: promoShisha,
     baked: true,
     alt: 'Shisha & Hookah Lounge and Accessories',
+    hideOnMobile: true,
   },
   {
     id: 6,
     img: promoAccessories,
     baked: true,
     alt: 'Smoke Accessories Premium Collection',
+    hideOnMobile: true,
   },
 ]

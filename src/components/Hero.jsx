@@ -3,27 +3,44 @@ import { FiBluetooth, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { heroSlides } from '../data/heroSlides'
 
 const AUTOPLAY_MS = 5500
+const MOBILE_QUERY = '(max-width: 639px)'
 
 export default function Hero() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches
+  )
   const [active, setActive] = useState(0)
   const timerRef = useRef(null)
 
-  const goTo = useCallback((index) => {
-    setActive((index + heroSlides.length) % heroSlides.length)
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_QUERY)
+    const onChange = (e) => setIsMobile(e.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
   }, [])
+
+  const slides = isMobile ? heroSlides.filter((slide) => !slide.hideOnMobile) : heroSlides
+
+  useEffect(() => {
+    setActive(0)
+  }, [isMobile])
+
+  const goTo = useCallback((index) => {
+    setActive((index + slides.length) % slides.length)
+  }, [slides.length])
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
-      setActive((i) => (i + 1) % heroSlides.length)
+      setActive((i) => (i + 1) % slides.length)
     }, AUTOPLAY_MS)
     return () => clearInterval(timerRef.current)
-  }, [])
+  }, [slides.length])
 
   const pause = () => clearInterval(timerRef.current)
   const resume = () => {
     pause()
     timerRef.current = setInterval(() => {
-      setActive((i) => (i + 1) % heroSlides.length)
+      setActive((i) => (i + 1) % slides.length)
     }, AUTOPLAY_MS)
   }
 
@@ -33,7 +50,7 @@ export default function Hero() {
       onMouseEnter={pause}
       onMouseLeave={resume}
     >
-      {heroSlides.map((slide, i) => (
+      {slides.map((slide, i) => (
         <div
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -92,7 +109,7 @@ export default function Hero() {
       </button>
 
       <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2 rounded-full bg-black/20 px-3 py-1.5 backdrop-blur">
-        {heroSlides.map((slide, i) => (
+        {slides.map((slide, i) => (
           <button
             key={slide.id}
             type="button"
