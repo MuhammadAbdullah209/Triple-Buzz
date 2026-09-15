@@ -67,6 +67,15 @@ export const shopCategories = [
   },
 ]
 
+// Every leaf category a user can pick — each subcategory, plus any top-level
+// entry with none of its own (e.g. "Whip It"). Used for the Shop page's
+// category checkboxes so that list mirrors the header's mega menu exactly,
+// rather than only whatever categories happen to be represented in the
+// product cache loaded so far (see Shop.jsx).
+export const shopLeafCategories = shopCategories.flatMap((cat) =>
+  cat.subcategories.length > 0 ? cat.subcategories : [cat.label]
+)
+
 // The mega-menu mirrors the full taxonomy of the live site, but we only carry
 // product data for the categories below. This maps every top-level/sub label
 // used in the "Shop" dropdown to the real category (or categories) it should

@@ -3,19 +3,49 @@ import { useSearchParams } from 'react-router-dom'
 import { ChevronDownIcon } from '../components/Icons'
 import ProductCard from '../components/ProductCard'
 import AreasServed from '../components/AreasServed'
-import { useProducts } from '../context/ProductsContext'
-import { categoryPageCopy, defaultShopPageCopy, resolveCategoryLabel } from '../data/siteData'
+import { useProducts, normalizeProduct } from '../context/ProductsContext'
+import { fetchProducts } from '../lib/api'
+import {
+  categoryPageCopy,
+  defaultShopPageCopy,
+  resolveCategoryLabel,
+  categoryFilterMap,
+  shopLeafCategories,
+} from '../data/siteData'
+
+// Any single real category currently tops out at a few hundred items (the
+// largest, Disposable Vapes, is ~380), so one request per raw category value
+// at this limit reliably gets everything in one shot — no per-category
+// pagination needed.
+const CATEGORY_FETCH_LIMIT = 500
 
 const RATINGS = [5, 4, 3, 2, 1]
 const PAGE_WINDOW_SIZE = 4
 
+// Which leaf checkboxes a raw-value selection corresponds to — a label
+// "counts" only if *every* raw value it maps to is present in the selection,
+// not just any overlap. Several sibling categories share a legacy fallback
+// raw value (e.g. every Vaping subcategory also lists "THC Vapes"), so a
+// simple "any overlap" check would light up all of them the moment just one
+// was picked.
+function deriveSelectedLabels(rawValues) {
+  return shopLeafCategories.filter((label) =>
+    (categoryFilterMap[label] || [label]).every((v) => rawValues.includes(v))
+  )
+}
+
 export default function Shop() {
-  const { products, categoryNames, loading, loadingMore, hasMore, loadMore, error } = useProducts()
+  const { products, loading, loadingMore, hasMore, loadMore, error } = useProducts()
   const [searchParams] = useSearchParams()
   const initialCategory = searchParams.get('category')
-  const [selectedCategories, setSelectedCategories] = useState(
-    initialCategory ? initialCategory.split('|').filter(Boolean) : []
-  )
+  const initialRawCategories = initialCategory ? initialCategory.split('|').filter(Boolean) : []
+  // selectedCategories (raw backend values) is the source of truth for
+  // fetching and the URL. selectedLabels (friendly checkbox labels) is
+  // derived from it for display, but tracked separately so toggling one
+  // checkbox can add/remove exactly its own raw values without disturbing a
+  // sibling checkbox that happens to share one of them.
+  const [selectedCategories, setSelectedCategories] = useState(initialRawCategories)
+  const [selectedLabels, setSelectedLabels] = useState(() => deriveSelectedLabels(initialRawCategories))
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -38,28 +68,101 @@ export default function Shop() {
   // first one.
   useEffect(() => {
     const cat = searchParams.get('category')
-    setSelectedCategories(cat ? cat.split('|').filter(Boolean) : [])
+    const raw = cat ? cat.split('|').filter(Boolean) : []
+    setSelectedCategories(raw)
+    setSelectedLabels(deriveSelectedLabels(raw))
     setSearchQuery(searchParams.get('search') || '')
     setPage(1)
   }, [searchParams])
 
-  const toggleCategory = (cat) => {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    )
+  // Checkboxes show friendly leaf labels ("Batteries"), same as the header —
+  // each one resolves to one or more raw backend category values via
+  // categoryFilterMap under the hood, the same way header links already do.
+  // Updates selectedLabels (exactly this label, nothing shared) and
+  // recomputes selectedCategories (the raw values that actually drive
+  // fetching) from the full set of currently-checked labels.
+  const toggleCategory = (label) => {
+    const nextLabels = selectedLabels.includes(label)
+      ? selectedLabels.filter((l) => l !== label)
+      : [...selectedLabels, label]
+    setSelectedLabels(nextLabels)
+    setSelectedCategories([...new Set(nextLabels.flatMap((l) => categoryFilterMap[l] || [l]))])
     setPage(1)
   }
 
+  // A category link/checkbox picks one or more *raw* backend category values
+  // (via categoryFilterMap for header links, or the raw value directly for
+  // checkboxes). Previously this filtered whatever happened to already be
+  // loaded in the shared, incrementally-paginated product cache, pulling in
+  // more pages one at a time until enough matches turned up — for a sparse
+  // category that could mean paging through the entire ~2,400-item catalogue
+  // before the page ever filled. Fetching each selected raw category directly
+  // from the backend instead resolves it in one request per value, in
+  // parallel — a real query to the POS-synced catalogue, not a client-side
+  // filter of whatever's in memory.
+  const [categoryProducts, setCategoryProducts] = useState(null)
+  const [categoryLoading, setCategoryLoading] = useState(false)
+  const [categoryError, setCategoryError] = useState('')
+
+  const selectedCategoriesKey = selectedCategories.join('|')
+
+  useEffect(() => {
+    if (selectedCategories.length === 0) {
+      setCategoryProducts(null)
+      setCategoryError('')
+      return
+    }
+
+    let cancelled = false
+    setCategoryLoading(true)
+    setCategoryError('')
+
+    Promise.all(
+      selectedCategories.map((cat) =>
+        fetchProducts({ site: 'triplebuzz', limit: CATEGORY_FETCH_LIMIT, category: cat }).catch(() => ({
+          products: [],
+        }))
+      )
+    )
+      .then((results) => {
+        if (cancelled) return
+        const seen = new Set()
+        const merged = []
+        for (const data of results) {
+          for (const p of data.products || []) {
+            if (!seen.has(p._id)) {
+              seen.add(p._id)
+              merged.push(normalizeProduct(p))
+            }
+          }
+        }
+        setCategoryProducts(merged)
+      })
+      .catch(() => {
+        if (!cancelled) setCategoryError('Could not load products for this category right now.')
+      })
+      .finally(() => {
+        if (!cancelled) setCategoryLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategoriesKey])
+
+  const baseProducts = categoryProducts ?? products
+  const isLoadingList = categoryProducts === null ? loading : categoryLoading
+  const listError = categoryProducts === null ? error : categoryError
+
   const filtered = useMemo(() => {
     const term = searchQuery.trim().toLowerCase()
-    let list = products.filter((p) => {
-      const inCategory =
-        selectedCategories.length === 0 || selectedCategories.includes(p.category)
+    let list = baseProducts.filter((p) => {
       const price = parseFloat(p.price)
       const aboveMin = !minPrice || price >= parseFloat(minPrice)
       const belowMax = !maxPrice || price <= parseFloat(maxPrice)
       const matchesSearch = !term || p.name.toLowerCase().includes(term)
-      return inCategory && aboveMin && belowMax && matchesSearch
+      return aboveMin && belowMax && matchesSearch
     })
 
     if (sortBy === 'price-asc') {
@@ -69,7 +172,7 @@ export default function Shop() {
     }
 
     return list
-  }, [products, selectedCategories, searchQuery, minPrice, maxPrice, sortBy])
+  }, [baseProducts, searchQuery, minPrice, maxPrice, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const currentPage = Math.min(page, totalPages)
@@ -77,16 +180,24 @@ export default function Shop() {
   const pageWindowStart = Math.floor((currentPage - 1) / PAGE_WINDOW_SIZE) * PAGE_WINDOW_SIZE + 1
   const pageWindowEnd = Math.min(pageWindowStart + PAGE_WINDOW_SIZE - 1, totalPages)
 
-  // The full catalogue loads in backend-sized batches rather than all at
-  // once (see ProductsContext), so filtering/paging can run out of already-
-  // loaded items well before the real result set is exhausted. Whenever that
-  // happens, pull in the next batch until either there's enough to fill this
-  // page or the backend confirms there's nothing left.
+  // Only applies to the unfiltered "All" browse view — that one still reads
+  // from the shared, incrementally-loaded product cache (see ProductsContext),
+  // so filtering/paging can run out of already-loaded items well before the
+  // real result set is exhausted. Whenever that happens, pull in the next
+  // batch until either there's enough to fill this page or the backend
+  // confirms there's nothing left. Guarded on selectedCategories rather than
+  // categoryProducts so it stays off for the entire lifetime of a category
+  // selection, not just after that fetch resolves — categoryProducts is still
+  // null for a moment right after picking a category, while its own fetch is
+  // in flight, and this must not fire an unrelated unfiltered loadMore() in
+  // that window. Category-filtered views fetch everything for their category
+  // up front (see the effect above), so this never applies to them.
   useEffect(() => {
+    if (selectedCategories.length > 0) return
     if (hasMore && !loadingMore && filtered.length < currentPage * perPage) {
       loadMore()
     }
-  }, [hasMore, loadingMore, filtered.length, currentPage, perPage])
+  }, [selectedCategoriesKey, hasMore, loadingMore, filtered.length, currentPage, perPage])
 
   const relatedProducts = products.slice(0, 6)
 
@@ -127,22 +238,27 @@ export default function Shop() {
                     <input
                       type="checkbox"
                       checked={selectedCategories.length === 0}
-                      onChange={() => setSelectedCategories([])}
+                      onChange={() => {
+                        setSelectedCategories([])
+                        setSelectedLabels([])
+                      }}
                       className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold"
                     />
                     All
                   </label>
-                  {categoryNames.map((cat) => (
-                    <label key={cat} className="flex items-start gap-2 py-1 text-sm text-neutral-600">
-                      <input
-                        type="checkbox"
-                        checked={selectedCategories.includes(cat)}
-                        onChange={() => toggleCategory(cat)}
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold"
-                      />
-                      <span className="break-words">{cat}</span>
-                    </label>
-                  ))}
+                  {shopLeafCategories.map((label) => {
+                    return (
+                      <label key={label} className="flex items-start gap-2 py-1 text-sm text-neutral-600">
+                        <input
+                          type="checkbox"
+                          checked={selectedLabels.includes(label)}
+                          onChange={() => toggleCategory(label)}
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold"
+                        />
+                        <span className="break-words">{label}</span>
+                      </label>
+                    )
+                  })}
                 </>
               )}
             </div>
@@ -266,10 +382,10 @@ export default function Shop() {
               </div>
             </div>
 
-            {loading ? (
+            {isLoadingList ? (
               <p className="py-16 text-center text-sm text-neutral-500">Loading products…</p>
-            ) : error ? (
-              <p className="py-16 text-center text-sm text-red-600">{error}</p>
+            ) : listError ? (
+              <p className="py-16 text-center text-sm text-red-600">{listError}</p>
             ) : pageItems.length === 0 && !loadingMore ? (
               <p className="py-16 text-center text-sm text-neutral-500">
                 No products match your filters.

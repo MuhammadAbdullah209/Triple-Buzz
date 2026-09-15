@@ -128,7 +128,7 @@ export default function ProductDetail() {
     ;(async () => {
       for (const term of searchTerms.length ? searchTerms : [slug]) {
         try {
-          const data = await fetchProducts(1, 'triplebuzz', 100, term)
+          const data = await fetchProducts({ page: 1, site: 'triplebuzz', limit: 100, search: term })
           const match = (data.products || []).map(normalizeProduct).find((p) => p.slug === slug)
           if (match) {
             if (!cancelled) setRemoteProduct(match)

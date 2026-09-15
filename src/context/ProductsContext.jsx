@@ -51,7 +51,7 @@ export function ProductsProvider({ children }) {
   // more pages on demand via loadMore() as it needs them.
   useEffect(() => {
     let cancelled = false
-    fetchProducts(1, 'triplebuzz', PAGE_SIZE)
+    fetchProducts({ page: 1, site: 'triplebuzz', limit: PAGE_SIZE })
       .then((data) => {
         if (cancelled) return
         setProducts((data.products ?? []).map(normalizeProduct))
@@ -75,7 +75,7 @@ export function ProductsProvider({ children }) {
     if (loading || loadingMore || !hasMore) return
     setLoadingMore(true)
     const nextPage = page + 1
-    fetchProducts(nextPage, 'triplebuzz', PAGE_SIZE)
+    fetchProducts({ page: nextPage, site: 'triplebuzz', limit: PAGE_SIZE })
       .then((data) => {
         setProducts((prev) => [...prev, ...(data.products ?? []).map(normalizeProduct)])
         setPage(nextPage)
