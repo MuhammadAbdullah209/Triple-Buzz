@@ -7,6 +7,7 @@ import { useProducts } from '../context/ProductsContext'
 import { categoryPageCopy, defaultShopPageCopy, resolveCategoryLabel } from '../data/siteData'
 
 const RATINGS = [5, 4, 3, 2, 1]
+const PAGE_WINDOW_SIZE = 4
 
 export default function Shop() {
   const { products, categoryNames, loading, loadingMore, hasMore, loadMore, error } = useProducts()
@@ -70,6 +71,8 @@ export default function Shop() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const currentPage = Math.min(page, totalPages)
   const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage)
+  const pageWindowStart = Math.floor((currentPage - 1) / PAGE_WINDOW_SIZE) * PAGE_WINDOW_SIZE + 1
+  const pageWindowEnd = Math.min(pageWindowStart + PAGE_WINDOW_SIZE - 1, totalPages)
 
   // The full catalogue loads in backend-sized batches rather than all at
   // once (see ProductsContext), so filtering/paging can run out of already-
@@ -117,24 +120,24 @@ export default function Shop() {
               </button>
               {openFilters.category && (
                 <>
-                  <label className="flex items-center gap-2 py-1 text-sm text-neutral-600">
+                  <label className="flex items-start gap-2 py-1 text-sm text-neutral-600">
                     <input
                       type="checkbox"
                       checked={selectedCategories.length === 0}
                       onChange={() => setSelectedCategories([])}
-                      className="h-4 w-4 accent-brand-gold"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold"
                     />
                     All
                   </label>
                   {categoryNames.map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
+                    <label key={cat} className="flex items-start gap-2 py-1 text-sm text-neutral-600">
                       <input
                         type="checkbox"
                         checked={selectedCategories.includes(cat)}
                         onChange={() => toggleCategory(cat)}
-                        className="h-4 w-4 accent-brand-gold"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold"
                       />
-                      {cat}
+                      <span className="break-words">{cat}</span>
                     </label>
                   ))}
                 </>
@@ -155,13 +158,13 @@ export default function Shop() {
               </button>
               {openFilters.rating && (
                 <>
-                  <label className="flex items-center gap-2 py-1 text-sm text-neutral-600">
-                    <input type="checkbox" defaultChecked className="h-4 w-4 accent-brand-gold" />
+                  <label className="flex items-start gap-2 py-1 text-sm text-neutral-600">
+                    <input type="checkbox" defaultChecked className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold" />
                     All
                   </label>
                   {RATINGS.map((r) => (
-                    <label key={r} className="flex items-center gap-2 py-1 text-sm text-neutral-600">
-                      <input type="checkbox" className="h-4 w-4 accent-brand-gold" />
+                    <label key={r} className="flex items-start gap-2 py-1 text-sm text-neutral-600">
+                      <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold" />
                       {r} {r === 1 ? 'Star' : 'Stars'}
                     </label>
                   ))}
@@ -283,34 +286,37 @@ export default function Shop() {
 
             {totalPages > 1 && (
               <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setPage(i + 1)}
-                      className={`grid h-9 w-9 place-items-center rounded-md text-sm font-semibold transition ${currentPage === i + 1
-                          ? 'bg-ink text-white'
-                          : 'text-neutral-600 hover:bg-black/5'
-                        }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  {Array.from({ length: pageWindowEnd - pageWindowStart + 1 }).map((_, i) => {
+                    const pageNum = pageWindowStart + i
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setPage(pageNum)}
+                        className={`grid h-9 w-9 place-items-center rounded-md text-sm font-semibold transition ${currentPage === pageNum
+                            ? 'bg-ink text-white'
+                            : 'text-neutral-600 hover:bg-black/5'
+                          }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
                 </div>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    disabled={currentPage === 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={pageWindowStart === 1}
+                    onClick={() => setPage(Math.max(1, pageWindowStart - PAGE_WINDOW_SIZE))}
                     className="flex items-center gap-1.5 rounded-md border border-neutral-200 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-black/[0.02] disabled:opacity-40"
                   >
                     &larr; Previous
                   </button>
                   <button
                     type="button"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={pageWindowEnd === totalPages}
+                    onClick={() => setPage(Math.min(totalPages, pageWindowStart + PAGE_WINDOW_SIZE))}
                     className="flex items-center gap-1.5 rounded-md border border-neutral-200 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-black/[0.02] disabled:opacity-40"
                   >
                     Next &rarr;

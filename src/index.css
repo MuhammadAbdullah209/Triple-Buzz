@@ -4,12 +4,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   font-family: 'Poppins', sans-serif;
   color: #1a1a1a;
   background-color: #ffffff;
+  overflow-x: hidden;
 }
 
 .container-x {
