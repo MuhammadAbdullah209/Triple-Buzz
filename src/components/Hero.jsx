@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { FiBluetooth, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { heroSlides } from '../data/heroSlides'
 
@@ -57,6 +58,10 @@ export default function Hero() {
             i === active ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
         >
+          {slide.baked && (
+            <Link to="/shop" className="absolute inset-0 z-[1]" aria-label={`${slide.alt} — Shop Now`} />
+          )}
+
           <img
             src={slide.img}
             alt={slide.baked ? slide.alt : slide.title}
@@ -77,9 +82,9 @@ export default function Hero() {
               </>
             )}
             {!slide.baked && (
-              <button type="button" className="btn-gold mt-6">
+              <Link to="/shop" className="btn-gold mt-6 inline-flex">
                 Shop Now
-              </button>
+              </Link>
             )}
           </div>
 
