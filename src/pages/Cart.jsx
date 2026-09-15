@@ -627,7 +627,7 @@ export default function Cart() {
                 }`}
               >
                 <CardIcon className="h-4 w-4" />
-                Pay at Pickup
+                Cash On Delivery
               </button>
               <button
                 type="button"

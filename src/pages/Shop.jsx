@@ -22,7 +22,10 @@ export default function Shop() {
   const [sortBy, setSortBy] = useState('latest')
   const [perPage, setPerPage] = useState(9)
   const [page, setPage] = useState(1)
-  const [openFilters, setOpenFilters] = useState({ category: true, rating: true, price: true })
+  const [openFilters, setOpenFilters] = useState(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024
+    return { category: !isMobile, rating: !isMobile, price: !isMobile }
+  })
 
   const toggleFilterSection = (key) => {
     setOpenFilters((prev) => ({ ...prev, [key]: !prev[key] }))
