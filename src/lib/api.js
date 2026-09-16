@@ -243,6 +243,24 @@ export function subscribeNewsletter(email) {
   return api('/Newsletter/subscribe', { method: 'POST', body: { email } })
 }
 
+/* ---------- Coupons ---------- */
+
+// The announcement ribbon polls this for whatever coupon the admin portal
+// currently has flagged "show on ribbon" — returns { coupon: null } when
+// nothing is featured (or the featured one has expired), so the ribbon can
+// fall back to the default free-shipping copy.
+export function fetchRibbonCoupon(site = 'triplebuzz') {
+  return api(`/Coupon/ribbon?site=${site}`)
+}
+
+// Previews a coupon's discount against the current cart total before
+// checkout. The actual discount is re-validated and re-applied server-side
+// when the order is created, so this is just for showing the customer what
+// they'll get — never trusted as the final charged amount.
+export function validateCoupon(code, cartTotal, site = 'triplebuzz') {
+  return api('/Coupon/validate', { method: 'POST', body: { code, cartTotal, site } })
+}
+
 /* ---------- Blog ---------- */
 
 export function fetchBlogs(page = 1, site = 'triplebuzz') {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { FaCcPaypal } from 'react-icons/fa'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { createOrder, chargeAuthorizeNetOrder, ApiError } from '../lib/api'
+import { createOrder, chargeAuthorizeNetOrder, validateCoupon, ApiError } from '../lib/api'
 import { useProducts } from '../context/ProductsContext'
 import { siteConfig } from '../data/siteData'
 import ProductCard from '../components/ProductCard'
@@ -12,10 +12,6 @@ import CardPaymentForm from '../components/CardPaymentForm'
 import PayPalCheckoutButton from '../components/PayPalCheckoutButton'
 import ShippingAddressModal from '../components/ShippingAddressModal'
 import PaymentIcons from '../components/PaymentIcons'
-
-const COUPONS = {
-  WELCOME10: 0.1,
-}
 
 const PICKUP_LABEL = `Pickup at ${siteConfig.address}`
 
@@ -120,8 +116,9 @@ export default function Cart() {
 
   const [showCoupon, setShowCoupon] = useState(false)
   const [couponInput, setCouponInput] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [appliedCoupon, setAppliedCoupon] = useState(null) // { code, discountType, value }
   const [couponError, setCouponError] = useState('')
+  const [couponBusy, setCouponBusy] = useState(false)
 
   const [notes, setNotes] = useState({})
   const [notingSlug, setNotingSlug] = useState(null)
@@ -138,8 +135,14 @@ export default function Cart() {
   const [placedOrder, setPlacedOrder] = useState(null)
 
   const itemCount = items.reduce((s, i) => s + i.qty, 0)
-  const discount = appliedCoupon ? (subtotal + protectionTotal) * COUPONS[appliedCoupon] : 0
-  const grandTotal = subtotal + protectionTotal - discount
+  const preDiscountTotal = subtotal + protectionTotal
+  const rawDiscount = appliedCoupon
+    ? appliedCoupon.discountType === 'percentage'
+      ? (preDiscountTotal * appliedCoupon.value) / 100
+      : appliedCoupon.value
+    : 0
+  const discount = Math.round(Math.min(rawDiscount, preDiscountTotal) * 100) / 100
+  const grandTotal = preDiscountTotal - discount
   const shippingLabel = shippingAddress
     ? `${shippingAddress.line1}, ${shippingAddress.city}, ${shippingAddress.province} ${shippingAddress.postalCode}`
     : PICKUP_LABEL
@@ -148,14 +151,19 @@ export default function Cart() {
     (p) => !items.some((i) => i.slug === p.slug)
   ).slice(0, 6)
 
-  const applyCoupon = () => {
+  const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase()
-    if (COUPONS[code]) {
-      setAppliedCoupon(code)
-      setCouponError('')
-    } else {
-      setCouponError("That code isn't valid.")
+    if (!code) return
+    setCouponBusy(true)
+    setCouponError('')
+    try {
+      const data = await validateCoupon(code, preDiscountTotal, 'triplebuzz')
+      setAppliedCoupon({ code: data.code, discountType: data.discountType, value: data.value })
+    } catch (err) {
+      setCouponError(err instanceof ApiError ? err.message : "That code isn't valid.")
       setAppliedCoupon(null)
+    } finally {
+      setCouponBusy(false)
     }
   }
 
@@ -192,6 +200,10 @@ export default function Cart() {
         postalCode: address.postalCode,
         country: address.country,
       },
+      site: 'triplebuzz',
+    }
+    if (appliedCoupon) {
+      payload.couponCode = appliedCoupon.code
     }
     if (!isLoggedIn) {
       payload.guestInfo = {
@@ -805,10 +817,11 @@ export default function Cart() {
                     />
                     <button
                       type="button"
-                      onClick={applyCoupon}
-                      className="shrink-0 rounded-md border border-brand-gold px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-goldDark hover:bg-amber-50"
+                      onClick={handleApplyCoupon}
+                      disabled={couponBusy}
+                      className="shrink-0 rounded-md border border-brand-gold px-4 py-2 text-xs font-bold uppercase tracking-wide text-brand-goldDark hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Apply
+                      {couponBusy ? 'Checking…' : 'Apply'}
                     </button>
                   </div>
                   {couponError && (
@@ -816,10 +829,13 @@ export default function Cart() {
                   )}
                   {appliedCoupon && (
                     <p className="text-xs font-medium text-brand-goldDark">
-                      Code {appliedCoupon} applied &mdash; 10% off
+                      Code {appliedCoupon.code} applied &mdash;{' '}
+                      {appliedCoupon.discountType === 'percentage'
+                        ? `${appliedCoupon.value}%`
+                        : `$${appliedCoupon.value}`}{' '}
+                      off
                     </p>
                   )}
-                  <p className="text-xs text-neutral-500">Try WELCOME10 for 10% off your first order.</p>
                 </div>
               )}
 
