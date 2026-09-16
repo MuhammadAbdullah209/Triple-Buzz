@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaCcPaypal } from 'react-icons/fa'
 import { useCart } from '../context/CartContext'
@@ -85,7 +85,7 @@ const PAYMENT_GATEWAYS = [
 export default function Cart() {
   const { items, updateQty, removeItem, toggleProtection, subtotal, protectionTotal, clearCart } =
     useCart()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, user } = useAuth()
   const { products: allProducts } = useProducts()
 
   const [placing, setPlacing] = useState(false)
@@ -100,6 +100,23 @@ export default function Cart() {
     city: '',
     postalCode: '',
   })
+
+  // Contact details the order confirmation email goes to. Required for a
+  // guest (the backend has no other way to know who to email); for a signed
+  // in user the backend already emails their profile address, so this is
+  // just an optional override shown for reassurance.
+  const [guestInfo, setGuestInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  })
+
+  useEffect(() => {
+    if (isLoggedIn && user?.email) {
+      setGuestInfo((g) => (g.email ? g : { ...g, email: user.email }))
+    }
+  }, [isLoggedIn, user])
 
   const [showCoupon, setShowCoupon] = useState(false)
   const [couponInput, setCouponInput] = useState('')
@@ -159,8 +176,14 @@ export default function Cart() {
       setPlaceError('Add a shipping/contact address before placing your order.')
       return null
     }
+    if (!isLoggedIn) {
+      if (!guestInfo.firstName || !guestInfo.lastName || !guestInfo.email || !guestInfo.phone) {
+        setPlaceError('Please add your name, email and phone number before placing your order.')
+        return null
+      }
+    }
     setPlaceError('')
-    return {
+    const payload = {
       items: items.map((i) => ({ productId: i.backendId, quantity: i.qty })),
       shippingAddress: {
         street: address.line1,
@@ -170,6 +193,15 @@ export default function Cart() {
         country: address.country,
       },
     }
+    if (!isLoggedIn) {
+      payload.guestInfo = {
+        firstName: guestInfo.firstName,
+        lastName: guestInfo.lastName,
+        email: guestInfo.email,
+        phone: guestInfo.phone,
+      }
+    }
+    return payload
   }
 
   const handleOrderPlaced = (order) => {
@@ -189,7 +221,6 @@ export default function Cart() {
   const placeOrder = async () => {
     const payload = buildOrderPayload()
     if (!payload) return
-    const { items: orderItems, shippingAddress: orderShippingAddress } = payload
 
     setPlacing(true)
     try {
@@ -202,17 +233,9 @@ export default function Cart() {
           setPlaceError(tokenizeErr.message || 'Could not process your card. Please check the details and try again.')
           return
         }
-        ;({ order } = await chargeAuthorizeNetOrder({
-          items: orderItems,
-          shippingAddress: orderShippingAddress,
-          opaqueData,
-        }))
+        ;({ order } = await chargeAuthorizeNetOrder({ ...payload, opaqueData }))
       } else {
-        ;({ order } = await createOrder({
-          items: orderItems,
-          shippingAddress: orderShippingAddress,
-          paymentMethod: 'Cash On Delivery',
-        }))
+        ;({ order } = await createOrder({ ...payload, paymentMethod: 'Cash On Delivery' }))
       }
       handleOrderPlaced(order)
     } catch (err) {
@@ -507,6 +530,64 @@ export default function Cart() {
               </p>
 
               <div className="mt-4 border-t border-neutral-200 pt-4">
+                <p className="mb-3 text-sm font-bold text-ink">Contact Information</p>
+                {!isLoggedIn ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        required
+                        placeholder="First name"
+                        value={guestInfo.firstName}
+                        onChange={(e) => setGuestInfo((g) => ({ ...g, firstName: e.target.value }))}
+                        className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                      <input
+                        required
+                        placeholder="Last name"
+                        value={guestInfo.lastName}
+                        onChange={(e) => setGuestInfo((g) => ({ ...g, lastName: e.target.value }))}
+                        className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <input
+                        required
+                        type="email"
+                        placeholder="Email"
+                        value={guestInfo.email}
+                        onChange={(e) => setGuestInfo((g) => ({ ...g, email: e.target.value }))}
+                        className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                      <input
+                        required
+                        type="tel"
+                        placeholder="Phone number"
+                        value={guestInfo.phone}
+                        onChange={(e) => setGuestInfo((g) => ({ ...g, phone: e.target.value }))}
+                        className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                    </div>
+                    <p className="text-xs text-neutral-500">
+                      We&rsquo;ll send your order confirmation to this email.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    <input
+                      type="email"
+                      placeholder="Email (optional)"
+                      value={guestInfo.email}
+                      onChange={(e) => setGuestInfo((g) => ({ ...g, email: e.target.value }))}
+                      className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brand-gold/40"
+                    />
+                    <p className="text-xs text-neutral-500">
+                      Optional &mdash; we already have your email from your profile and will send your order confirmation there.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 border-t border-neutral-200 pt-4">
                 {!address || editingAddress ? (
                   <form onSubmit={saveAddress} className="flex flex-col gap-3">
                     <input
@@ -794,23 +875,17 @@ export default function Cart() {
                 </p>
               )}
 
-              {!isLoggedIn ? (
-                <Link to="/sign-in" className="btn-gold mt-5 block w-full text-center">
-                  Sign In to Checkout
-                </Link>
-              ) : (
-                (paymentMode === 'cod' || (paymentMode === 'card' && activeGateway === 'authorize')) && (
-                  <button
-                    type="button"
-                    onClick={placeOrder}
-                    disabled={placing || missingLink}
-                    className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {placing ? 'Placing Order…' : paymentMode === 'card' ? 'Pay & Place Order' : 'Pay Now'}
-                  </button>
-                )
+              {(paymentMode === 'cod' || (paymentMode === 'card' && activeGateway === 'authorize')) && (
+                <button
+                  type="button"
+                  onClick={placeOrder}
+                  disabled={placing || missingLink}
+                  className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {placing ? 'Placing Order…' : paymentMode === 'card' ? 'Pay & Place Order' : 'Pay Now'}
+                </button>
               )}
-              {missingLink && isLoggedIn && (
+              {missingLink && (
                 <p className="mt-2 text-center text-xs text-red-500">
                   Some items in your cart aren&rsquo;t linked to the store catalogue yet.
                 </p>
