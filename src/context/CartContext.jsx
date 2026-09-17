@@ -45,7 +45,6 @@ export function CartProvider({ children }) {
           image: product.image,
           category: product.category,
           qty,
-          protection: false,
         },
       ]
     })
@@ -62,29 +61,17 @@ export function CartProvider({ children }) {
     setItems((prev) => prev.filter((i) => i.slug !== slug))
   }
 
-  const toggleProtection = (slug) => {
-    setItems((prev) =>
-      prev.map((i) => (i.slug === slug ? { ...i, protection: !i.protection } : i))
-    )
-  }
-
   const clearCart = () => setItems([])
 
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.price * i.qty, 0), [items])
-  const protectionTotal = useMemo(
-    () => items.reduce((s, i) => s + (i.protection ? i.qty * 1 : 0), 0),
-    [items]
-  )
 
   const value = {
     items,
     addItem,
     updateQty,
     removeItem,
-    toggleProtection,
     clearCart,
     subtotal,
-    protectionTotal,
     isCartOpen,
     openCart,
     closeCart,

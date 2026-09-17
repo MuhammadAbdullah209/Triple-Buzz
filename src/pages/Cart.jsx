@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { FaCcPaypal } from 'react-icons/fa'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { createOrder, chargeAuthorizeNetOrder, validateCoupon, ApiError } from '../lib/api'
+import { chargeAuthorizeNetOrder, validateCoupon, ApiError } from '../lib/api'
 import { useProducts } from '../context/ProductsContext'
 import { siteConfig } from '../data/siteData'
 import ProductCard from '../components/ProductCard'
@@ -79,8 +79,7 @@ const PAYMENT_GATEWAYS = [
 ]
 
 export default function Cart() {
-  const { items, updateQty, removeItem, toggleProtection, subtotal, protectionTotal, clearCart } =
-    useCart()
+  const { items, updateQty, removeItem, subtotal, clearCart } = useCart()
   const { isLoggedIn, user } = useAuth()
   const { products: allProducts } = useProducts()
 
@@ -125,7 +124,6 @@ export default function Cart() {
 
   const [placed, setPlaced] = useState(false)
 
-  const [paymentMode, setPaymentMode] = useState('cod') // 'cod' | 'card'
   const [activeGateway, setActiveGateway] = useState('authorize') // which provider's panel is expanded
   const cardFormRef = useRef(null)
 
@@ -135,7 +133,7 @@ export default function Cart() {
   const [placedOrder, setPlacedOrder] = useState(null)
 
   const itemCount = items.reduce((s, i) => s + i.qty, 0)
-  const preDiscountTotal = subtotal + protectionTotal
+  const preDiscountTotal = subtotal
   const rawDiscount = appliedCoupon
     ? appliedCoupon.discountType === 'percentage'
       ? (preDiscountTotal * appliedCoupon.value) / 100
@@ -176,7 +174,7 @@ export default function Cart() {
 
   const missingLink = items.some((i) => !i.backendId)
 
-  // Shared by the COD/card submit flow and the PayPal button's createOrder
+  // Shared by the card submit flow and the PayPal button's createOrder
   // callback — validates the address and shapes the payload the backend
   // expects. Returns null (after setting placeError) when invalid.
   const buildOrderPayload = () => {
@@ -222,7 +220,6 @@ export default function Cart() {
       items,
       itemCount,
       subtotal,
-      protectionTotal,
       discount,
       shippingLabel,
     })
@@ -236,19 +233,14 @@ export default function Cart() {
 
     setPlacing(true)
     try {
-      let order
-      if (paymentMode === 'card' && activeGateway === 'authorize') {
-        let opaqueData
-        try {
-          opaqueData = await cardFormRef.current.tokenize()
-        } catch (tokenizeErr) {
-          setPlaceError(tokenizeErr.message || 'Could not process your card. Please check the details and try again.')
-          return
-        }
-        ;({ order } = await chargeAuthorizeNetOrder({ ...payload, opaqueData }))
-      } else {
-        ;({ order } = await createOrder({ ...payload, paymentMethod: 'Cash On Delivery' }))
+      let opaqueData
+      try {
+        opaqueData = await cardFormRef.current.tokenize()
+      } catch (tokenizeErr) {
+        setPlaceError(tokenizeErr.message || 'Could not process your card. Please check the details and try again.')
+        return
       }
+      const { order } = await chargeAuthorizeNetOrder({ ...payload, opaqueData })
       handleOrderPlaced(order)
     } catch (err) {
       setPlaceError(err instanceof ApiError ? err.message : 'Could not place your order.')
@@ -333,12 +325,6 @@ export default function Cart() {
                   Total Product Price ({placedOrder.itemCount} Item{placedOrder.itemCount === 1 ? '' : 's'})
                 </span>
                 <span className="font-semibold text-ink">${placedOrder.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Total Product Protection</span>
-                <span className="font-semibold text-ink">
-                  ${placedOrder.protectionTotal.toFixed(2)}
-                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Total Shipping Price</span>
@@ -515,22 +501,6 @@ export default function Cart() {
                       </button>
                     </div>
                   </div>
-
-                  <label className="mt-4 flex items-start gap-3 border-t border-neutral-200 pt-4 text-sm text-neutral-600">
-                    <input
-                      type="checkbox"
-                      checked={item.protection}
-                      onChange={() => toggleProtection(item.slug)}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-brand-gold"
-                    />
-                    <span className="flex-1">
-                      <span className="font-semibold text-ink">Product Protection</span>{' '}
-                      <span className="text-xs text-neutral-500">
-                        The claim process is easy and instant, valid for 6 months
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-sm font-semibold text-ink">$1</span>
-                  </label>
                 </div>
               ))}
             </div>
@@ -711,76 +681,49 @@ export default function Cart() {
             </div>
 
             <h2 className="mt-10 text-xl font-bold text-ink">Payment Method</h2>
-            <div className="mt-4 flex overflow-hidden rounded-xl border border-neutral-200">
-              <button
-                type="button"
-                onClick={() => setPaymentMode('cod')}
-                className={`flex flex-1 items-center justify-center gap-2 px-5 py-4 text-sm font-semibold ${
-                  paymentMode === 'cod' ? 'bg-amber-50 text-brand-goldDark' : 'text-neutral-500 hover:bg-black/5'
-                }`}
-              >
-                <CardIcon className="h-4 w-4" />
-                Cash On Delivery
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMode('card')}
-                className={`flex flex-1 items-center justify-center gap-2 border-l border-neutral-200 px-5 py-4 text-sm font-semibold ${
-                  paymentMode === 'card' ? 'bg-amber-50 text-brand-goldDark' : 'text-neutral-500 hover:bg-black/5'
-                }`}
-              >
-                <CardIcon className="h-4 w-4" />
-                Credit / Debit Card
-              </button>
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {PAYMENT_GATEWAYS.map((gw) => {
+                const Icon = gw.icon
+                const isOpen = activeGateway === gw.id
+                return (
+                  <button
+                    key={gw.id}
+                    type="button"
+                    onClick={() => setActiveGateway(isOpen ? null : gw.id)}
+                    className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ${
+                      isOpen
+                        ? 'border-brand-gold bg-amber-50 text-brand-goldDark'
+                        : 'border-neutral-200 text-neutral-600 hover:bg-black/5'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {gw.label}
+                    <ChevronIcon
+                      className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                )
+              })}
             </div>
 
-            {paymentMode === 'card' && (
-              <>
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {PAYMENT_GATEWAYS.map((gw) => {
-                    const Icon = gw.icon
-                    const isOpen = activeGateway === gw.id
-                    return (
-                      <button
-                        key={gw.id}
-                        type="button"
-                        onClick={() => setActiveGateway(isOpen ? null : gw.id)}
-                        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ${
-                          isOpen
-                            ? 'border-brand-gold bg-amber-50 text-brand-goldDark'
-                            : 'border-neutral-200 text-neutral-600 hover:bg-black/5'
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {gw.label}
-                        <ChevronIcon
-                          className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                        />
-                      </button>
-                    )
-                  })}
+            {activeGateway === 'authorize' && <CardPaymentForm ref={cardFormRef} />}
+            {activeGateway === 'paypal' && (
+              isLoggedIn ? (
+                <PayPalCheckoutButton
+                  getOrderPayload={buildOrderPayload}
+                  onApproved={handleOrderPlaced}
+                  onError={setPlaceError}
+                />
+              ) : (
+                <div className="mt-3 rounded-lg border border-neutral-200 p-3 text-center">
+                  <p className="text-xs text-neutral-500">
+                    <Link to="/sign-in" className="font-semibold text-ink hover:text-brand-gold">
+                      Sign in
+                    </Link>{' '}
+                    to check out with PayPal.
+                  </p>
                 </div>
-
-                {activeGateway === 'authorize' && <CardPaymentForm ref={cardFormRef} />}
-                {activeGateway === 'paypal' && (
-                  isLoggedIn ? (
-                    <PayPalCheckoutButton
-                      getOrderPayload={buildOrderPayload}
-                      onApproved={handleOrderPlaced}
-                      onError={setPlaceError}
-                    />
-                  ) : (
-                    <div className="mt-3 rounded-lg border border-neutral-200 p-3 text-center">
-                      <p className="text-xs text-neutral-500">
-                        <Link to="/sign-in" className="font-semibold text-ink hover:text-brand-gold">
-                          Sign in
-                        </Link>{' '}
-                        to check out with PayPal.
-                      </p>
-                    </div>
-                  )
-                )}
-              </>
+              )
             )}
           </div>
 
@@ -849,12 +792,6 @@ export default function Cart() {
                     <span className="font-semibold text-ink">${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Total Product Protection</span>
-                    <span className="font-semibold text-ink">
-                      ${protectionTotal.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span>Total Shipping Price</span>
                     <span className="font-semibold text-brand-goldDark">Free</span>
                   </div>
@@ -891,14 +828,14 @@ export default function Cart() {
                 </p>
               )}
 
-              {(paymentMode === 'cod' || (paymentMode === 'card' && activeGateway === 'authorize')) && (
+              {activeGateway === 'authorize' && (
                 <button
                   type="button"
                   onClick={placeOrder}
                   disabled={placing || missingLink}
                   className="btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {placing ? 'Placing Order…' : paymentMode === 'card' ? 'Pay & Place Order' : 'Pay Now'}
+                  {placing ? 'Placing Order…' : 'Pay & Place Order'}
                 </button>
               )}
               {missingLink && (
@@ -907,13 +844,11 @@ export default function Cart() {
                 </p>
               )}
               <p className="mt-2 text-center text-xs text-neutral-500">
-                {paymentMode === 'card'
-                  ? activeGateway === 'paypal'
-                    ? 'Use the PayPal button above to complete your payment.'
-                    : activeGateway === 'authorize'
-                      ? 'Your card will be charged immediately.'
-                      : 'Choose a payment provider above to continue.'
-                  : 'No charge today — you pay in store when you pick up.'}
+                {activeGateway === 'paypal'
+                  ? 'Use the PayPal button above to complete your payment.'
+                  : activeGateway === 'authorize'
+                    ? 'Your card will be charged immediately.'
+                    : 'Choose a payment provider above to continue.'}
               </p>
               <div className="mt-4">
                 <PaymentIcons />
