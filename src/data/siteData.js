@@ -4,7 +4,7 @@
 export const siteConfig = {
   name: 'Triple Buzz',
   tagline: 'Smoke & Vape Shop',
-  phone: '+1 512-297-2131',
+  phone: '+1 512-351-8012',
   email: 'triplebuzzsmokeandvape@gmail.com',
   address: '801 Wells Branch Pkwy #115, Pflugerville',
   freeShippingNote: 'FREE SHIPPING ON ORDERS OVER $50 (CONTINENTAL U.S. ONLY)',
